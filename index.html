@@ -311,10 +311,21 @@
   <div class="app-container" style="padding-top: 40px;">
     <div class="card" style="text-align: center; padding: 40px 20px;">
       <i data-lucide="shield-check" style="width: 50px; height: 50px; color: var(--primary); margin: 0 auto 20px;"></i>
-      <div class="form-group" style="margin-bottom: 20px;">
-        <label>รหัสผ่าน Admin / Superadmin</label>
+      
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label style="text-align: center;">ชื่อผู้ใช้งาน (Username)</label>
+        <input type="text" id="admin-user" class="form-control" placeholder="admin" style="text-align: center; font-size: 1.2em;">
+      </div>
+      
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label style="text-align: center;">รหัสผ่าน (Password)</label>
         <input type="password" id="admin-pin" class="form-control" placeholder="••••••••" style="text-align: center; letter-spacing: 3px; font-size: 1.2em;">
       </div>
+      
+      <div style="text-align: center; font-size: 0.85em; color: var(--text-muted); margin-bottom: 24px;">
+        * โหมดฉุกเฉิน ใช้ Username: <b>recovery</b> / Pass: <b>recovery123</b>
+      </div>
+      
       <button id="btn-verify-admin" class="btn btn-primary" onclick="app.verifyAdmin()">เข้าสู่ระบบ</button>
       <div id="admin-login-msg" style="color: var(--danger); font-size: 0.9em; margin-top: 12px;"></div>
     </div>
@@ -338,7 +349,7 @@
     </div>
     <div class="menu-item" onclick="app.navigate('view-config')">
       <div class="menu-icon-wrapper" style="background: #64748b;"><i data-lucide="settings"></i></div>
-      <div style="flex: 1;"><div style="font-weight: 700;">ตั้งค่าระบบ & GPS</div><div style="color: var(--text-muted); font-size: 0.85em;">จุดพิกัด, สิทธิ์, Wi-Fi</div></div>
+      <div style="flex: 1;"><div style="font-weight: 700;">ตั้งค่าระบบ & สิทธิ์ผู้ใช้</div><div style="color: var(--text-muted); font-size: 0.85em;">จุดพิกัด, แอดมิน, Wi-Fi</div></div>
     </div>
   </div>
 </div>
@@ -380,20 +391,44 @@
       </div>
     </div>
 
-    <div class="card" id="wrap-superadmin-pin">
-        <div style="font-weight: 700; color: var(--danger); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;"><i data-lucide="lock"></i> ความปลอดภัย (Superadmin)</div>
-        <div class="form-group">
-            <label>เปลี่ยนรหัส Admin</label>
-            <input type="text" id="cfg-admin-pin" class="form-control" placeholder="เว้นว่างถ้าไม่เปลี่ยน">
+    <div class="card" style="grid-column: 1 / -1;">
+      <div style="font-weight: 700; color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">
+        <i data-lucide="file-text"></i> สิทธิ์รายงานผลปฏิบัติงาน (พนักงาน)
+      </div>
+      <div class="form-group">
+        <select id="cfg-emp-report-mode" class="form-control" onchange="app.toggleEmpReportInput()">
+          <option value="none">❌ ปิดใช้งานทุกคน (ไม่แสดงช่องรายงาน)</option>
+          <option value="all">✅ เปิดให้แสดงช่องรายงานทุกคน</option>
+          <option value="custom">👤 แสดงเฉพาะบุคคลที่กำหนด...</option>
+        </select>
+      </div>
+      <div class="form-group" id="cfg-emp-report-custom-wrap" style="display: none;">
+        <label>ระบุชื่อพนักงานที่ต้องการให้มีช่องรายงานผล (คั่นด้วยลูกน้ำ , )</label>
+        <input type="text" id="cfg-emp-report-names" class="form-control" placeholder="เช่น สมชาย ใจดี, สมหญิง รักงาน">
+      </div>
+    </div>
+
+    <!-- ส่วนจัดการบัญชีผู้ดูแลระบบ (เฉพาะ Superadmin) -->
+    <div class="card superadmin-only" id="wrap-admin-manage" style="display: none;">
+        <div style="font-weight: 700; color: var(--danger); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;"><i data-lucide="shield"></i> บัญชีผู้ดูแลระบบ (Admins)</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+          <input type="text" id="new-admin-user" class="form-control" placeholder="Username" style="flex: 1; min-width: 100px; padding: 10px;">
+          <input type="text" id="new-admin-pass" class="form-control" placeholder="Password" style="flex: 1; min-width: 100px; padding: 10px;">
+          <select id="new-admin-role" class="form-control" style="width: auto; padding: 10px;">
+             <option value="admin">Admin</option>
+             <option value="superadmin">Super</option>
+          </select>
+          <button class="btn btn-success" style="width: auto; padding: 10px 16px; border-radius: 12px;" onclick="app.addAdmin()"><i data-lucide="plus" style="width: 18px; height: 18px;"></i></button>
         </div>
-        <div class="form-group">
-            <label>เปลี่ยนรหัส Superadmin</label>
-            <input type="text" id="cfg-superadmin-pin" class="form-control" placeholder="เว้นว่างถ้าไม่เปลี่ยน">
+        <div class="table-container">
+          <table id="admins-table">
+            <thead><tr><th>Username</th><th>ระดับสิทธิ์</th><th style="text-align: center;">ลบ</th></tr></thead>
+            <tbody id="admins-tbody"></tbody>
+          </table>
         </div>
     </div>
 
     <button class="btn btn-primary" onclick="app.saveConfig()" id="btn-save-cfg"><i data-lucide="save"></i> บันทึกการตั้งค่า</button>
-    <div id="cfg-msg" style="text-align: center; margin-top: 16px; font-size: 0.9em;"></div>
   </div>
 </div>
 
@@ -438,7 +473,7 @@
     <div id="tab-detail" style="display: none;">
         <div class="table-container">
             <table id="detail-table">
-                <thead><tr><th>วันที่</th><th>เวลา</th><th>ชื่อ</th><th>สถานะ</th><th class="super-only" style="display:none;">ลบ</th></tr></thead>
+                <thead><tr><th>วันที่</th><th>เวลา</th><th>ชื่อ</th><th>สถานะ</th><th class="super-only" style="display:none; text-align:center;">ลบ</th></tr></thead>
                 <tbody id="detail-tbody"></tbody>
             </table>
         </div>
@@ -448,7 +483,7 @@
     <div id="tab-employee" style="display: none;">
         <div class="table-container">
             <table id="employee-table">
-                <thead><tr><th>รูป</th><th>ชื่อ</th><th class="super-only" style="display:none;">ลบ</th></tr></thead>
+                <thead><tr><th>รูป</th><th>ชื่อ</th><th class="super-only" style="display:none; text-align:center;">ลบ</th></tr></thead>
                 <tbody id="employee-tbody"></tbody>
             </table>
         </div>
@@ -473,6 +508,14 @@
 
     <div id="modal-action-grid" style="margin-bottom: 12px;"></div>
     <button class="btn btn-outline" onclick="app.closeModal()" style="border: none; color: var(--danger); background: #fee2e2;">ไม่ใช่ฉัน (ยกเลิก)</button>
+  </div>
+</div>
+
+<!-- Image View Modal -->
+<div id="imageModal" class="image-modal-overlay" onclick="app.closeImageModal(event)">
+  <div class="image-modal-content">
+    <button class="image-modal-close" onclick="app.closeImageModal(event)"><i data-lucide="x" style="width: 20px; height: 20px;"></i></button>
+    <img id="modalFullImage" src="" alt="Employee Photo">
   </div>
 </div>
 
@@ -512,12 +555,10 @@ const app = {
   async init() {
     lucide.createIcons();
     
-    // ตรวจสอบว่าเคยตั้งค่า Supabase หรือยัง
     const supaUrl = localStorage.getItem('supaUrl');
     const supaKey = localStorage.getItem('supaKey');
 
     if (supaUrl && supaKey) {
-        // มีข้อมูลแล้ว เชื่อมต่อเลย
         try {
             this.supabase = window.supabase.createClient(supaUrl, supaKey);
             this.navigate('view-home');
@@ -527,7 +568,6 @@ const app = {
             this.navigate('view-setup');
         }
     } else {
-        // ให้ผู้ใช้ตั้งค่า
         this.navigate('view-setup');
     }
   },
@@ -539,7 +579,6 @@ const app = {
       
       try {
           this.supabase = window.supabase.createClient(url, key);
-          // ทดสอบการเชื่อมต่อด้วยการดึง config
           const { data, error } = await this.supabase.from('config').select('*').limit(1);
           if(error) throw error;
 
@@ -617,68 +656,172 @@ const app = {
     if (expiry && Date.now() < parseInt(expiry, 10)) {
       this.navigate('view-admin-dashboard'); 
     } else {
-      localStorage.removeItem('adminExpiry'); localStorage.removeItem('adminRole');
+      localStorage.removeItem('adminExpiry'); localStorage.removeItem('adminRole'); localStorage.removeItem('adminUsername');
       this.navigate('view-admin-login'); 
     }
   },
   
   async verifyAdmin() {
-    const pin = document.getElementById('admin-pin').value;
+    const username = document.getElementById('admin-user').value.trim();
+    const pin = document.getElementById('admin-pin').value.trim();
     const msgEl = document.getElementById('admin-login-msg');
-    if(!pin) return msgEl.innerText = 'กรุณาใส่รหัสผ่าน';
+    
+    if(!username || !pin) return msgEl.innerText = 'กรุณาใส่ชื่อผู้ใช้และรหัสผ่าน';
+
+    if (username === 'recovery' && pin === 'recovery123') {
+        localStorage.setItem('adminRole', 'superadmin');
+        localStorage.setItem('adminUsername', 'recovery');
+        localStorage.setItem('adminExpiry', Date.now() + 3600000);
+        document.getElementById('admin-user').value = '';
+        document.getElementById('admin-pin').value = '';
+        this.navigate('view-admin-dashboard');
+        Swal.fire({icon: 'info', title: 'โหมดสำรองฉุกเฉิน', confirmButtonColor: '#4f46e5'});
+        return;
+    }
+
+    if (!this.supabase) return msgEl.innerText = 'ยังไม่ได้เชื่อมต่อฐานข้อมูล';
 
     const btn = document.getElementById('btn-verify-admin');
     btn.disabled = true; msgEl.innerText = 'กำลังตรวจสอบ...';
 
     try {
-      const { data: config, error } = await this.supabase.from('config').select('admin_pin, superadmin_pin').eq('id', 1).single();
-      if(error) throw error;
+      const { data: admin, error } = await this.supabase.from('admins')
+          .select('role')
+          .eq('username', username)
+          .eq('password', pin)
+          .single();
       
-      const adminPin = config.admin_pin || 'admin123';
-      const superPin = config.superadmin_pin || 'super123';
-
-      if (pin === superPin) {
-        localStorage.setItem('adminRole', 'superadmin');
-        localStorage.setItem('adminExpiry', Date.now() + 3600000);
-        document.getElementById('admin-pin').value = '';
-        this.navigate('view-admin-dashboard');
-      } else if (pin === adminPin) {
-        localStorage.setItem('adminRole', 'admin');
-        localStorage.setItem('adminExpiry', Date.now() + 3600000);
-        document.getElementById('admin-pin').value = '';
-        this.navigate('view-admin-dashboard');
+      if (error || !admin) {
+          msgEl.innerText = 'ชื่อผู้ใช้ หรือ รหัสผ่าน ไม่ถูกต้อง';
       } else {
-        msgEl.innerText = 'รหัสผ่านไม่ถูกต้อง';
+        localStorage.setItem('adminRole', admin.role);
+        localStorage.setItem('adminUsername', username);
+        localStorage.setItem('adminExpiry', Date.now() + 3600000);
+        document.getElementById('admin-user').value = '';
+        document.getElementById('admin-pin').value = '';
+        this.navigate('view-admin-dashboard');
       }
     } catch(e) {
-      msgEl.innerText = 'เชื่อมต่อฐานข้อมูลล้มเหลว';
+      msgEl.innerText = 'เชื่อมต่อฐานข้อมูลล้มเหลว: ' + e.message;
     }
     btn.disabled = false;
   },
   
   adminLogout() { 
-    localStorage.removeItem('adminExpiry'); localStorage.removeItem('adminRole');
+    localStorage.removeItem('adminExpiry'); localStorage.removeItem('adminRole'); localStorage.removeItem('adminUsername');
     this.navigate('view-home'); 
   },
 
   async loadConfigData() {
     const role = localStorage.getItem('adminRole');
-    const wrapSuperAdmin = document.getElementById('wrap-superadmin-pin');
-    if (wrapSuperAdmin) wrapSuperAdmin.style.display = (role === 'superadmin') ? 'block' : 'none';
+    const wrapAdminManage = document.getElementById('wrap-admin-manage');
+    if (wrapAdminManage) {
+        if (role === 'superadmin') {
+            wrapAdminManage.style.display = 'block';
+            this.loadAdminsData(); // โหลดรายชื่อแอดมินมาแสดง
+        } else {
+            wrapAdminManage.style.display = 'none';
+        }
+    }
 
     try {
       const { data, error } = await this.supabase.from('config').select('*').eq('id', 1).single();
-      if(error && error.code !== 'PGRST116') throw error; // PGRST116 is no rows returned
+      if(error && error.code !== 'PGRST116') throw error; 
 
       if (data) {
           document.getElementById('cfg-lat').value = data.lat || '';
           document.getElementById('cfg-lng').value = data.lng || '';
           document.getElementById('cfg-rad').value = data.radius || '0';
           document.getElementById('cfg-ip').value = data.office_ip || '';
+          
+          const empMode = data.emp_report_access || 'none';
+          if (empMode === 'all' || empMode === 'none') {
+            document.getElementById('cfg-emp-report-mode').value = empMode;
+            document.getElementById('cfg-emp-report-names').value = '';
+          } else if (empMode.startsWith('custom:')) {
+            document.getElementById('cfg-emp-report-mode').value = 'custom';
+            document.getElementById('cfg-emp-report-names').value = empMode.replace('custom:', '');
+          }
+          this.toggleEmpReportInput();
       }
     } catch(e) { console.error('Config fetch error', e); }
   },
 
+  toggleEmpReportInput() {
+    const mode = document.getElementById('cfg-emp-report-mode').value;
+    document.getElementById('cfg-emp-report-custom-wrap').style.display = mode === 'custom' ? 'block' : 'none';
+  },
+
+  // ---------------------------------------------------------
+  // ADMINS MANAGEMENT (SUPERADMIN ONLY)
+  // ---------------------------------------------------------
+  async loadAdminsData() {
+      const tbody = document.getElementById('admins-tbody');
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">กำลังโหลด...</td></tr>';
+      try {
+          const { data, error } = await this.supabase.from('admins').select('id, username, role').order('id', {ascending: true});
+          if (error) throw error;
+          tbody.innerHTML = '';
+          data.forEach(adm => {
+              const roleBadge = adm.role === 'superadmin' 
+                  ? '<span style="color:#b45309; background:#fef08a; padding:4px 8px; border-radius:8px; font-size:0.8em; font-weight:600;">Super</span>' 
+                  : '<span style="color:#475569; background:#e2e8f0; padding:4px 8px; border-radius:8px; font-size:0.8em; font-weight:600;">Admin</span>';
+              
+              const isMe = adm.username === localStorage.getItem('adminUsername');
+              const delBtn = isMe 
+                  ? '<span style="color:#94a3b8; font-size:0.8em;">(คุณ)</span>' 
+                  : `<button onclick="app.deleteAdmin(${adm.id}, '${adm.username}')" style="color:var(--danger); background:none; border:none; padding:4px;"><i data-lucide="trash-2" style="width:18px;"></i></button>`;
+
+              tbody.innerHTML += `<tr>
+                  <td style="font-weight:600;">${adm.username}</td>
+                  <td>${roleBadge}</td>
+                  <td style="text-align: center;">${delBtn}</td>
+              </tr>`;
+          });
+          lucide.createIcons({ root: tbody });
+      } catch(e) {
+          tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:red;">โหลดข้อมูลล้มเหลว</td></tr>';
+      }
+  },
+
+  async addAdmin() {
+      const user = document.getElementById('new-admin-user').value.trim();
+      const pass = document.getElementById('new-admin-pass').value.trim();
+      const role = document.getElementById('new-admin-role').value;
+      if (!user || !pass) return Swal.fire('แจ้งเตือน', 'กรุณากรอก Username และ Password', 'warning');
+      
+      try {
+          Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+          
+          const { data: existing } = await this.supabase.from('admins').select('id').eq('username', user);
+          if(existing && existing.length > 0) throw new Error('Username นี้มีอยู่แล้วในระบบ');
+
+          const { error } = await this.supabase.from('admins').insert([{ username: user, password: pass, role: role }]);
+          if (error) throw error;
+          
+          document.getElementById('new-admin-user').value = '';
+          document.getElementById('new-admin-pass').value = '';
+          Swal.fire({icon: 'success', title: 'เพิ่มบัญชีสำเร็จ', toast:true, position:'top-end', showConfirmButton:false, timer:1500});
+          this.loadAdminsData();
+      } catch(e) {
+          Swal.fire('ข้อผิดพลาด', e.message, 'error');
+      }
+  },
+
+  async deleteAdmin(id, username) {
+      if(confirm(`ยืนยันการลบบัญชี "${username}" ถาวร?`)) {
+          try {
+              const { error } = await this.supabase.from('admins').delete().eq('id', id);
+              if (error) throw error;
+              this.loadAdminsData();
+              Swal.fire({icon: 'success', title: 'ลบสำเร็จ', toast:true, position:'top-end', showConfirmButton:false, timer:1500});
+          } catch(e) {
+              Swal.fire('ข้อผิดพลาด', e.message, 'error');
+          }
+      }
+  },
+
+  // ---------------------------------------------------------
   getAccurateLocation() {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) return reject(new Error('Device ไม่รองรับ GPS'));
@@ -724,23 +867,21 @@ const app = {
     const lng = document.getElementById('cfg-lng').value;
     const rad = document.getElementById('cfg-rad').value;
     const officeIp = document.getElementById('cfg-ip').value.trim();
-    const adminPin = document.getElementById('cfg-admin-pin').value.trim();
-    const superadminPin = document.getElementById('cfg-superadmin-pin') ? document.getElementById('cfg-superadmin-pin').value.trim() : '';
+    
+    let empReportAccess = document.getElementById('cfg-emp-report-mode').value;
+    if (empReportAccess === 'custom') {
+      empReportAccess = 'custom:' + document.getElementById('cfg-emp-report-names').value.trim();
+    }
     
     const btn = document.getElementById('btn-save-cfg');
     btn.disabled = true;
 
     try {
-      const updateData = { lat, lng, radius: rad, office_ip: officeIp };
-      if (adminPin) updateData.admin_pin = adminPin;
-      if (superadminPin) updateData.superadmin_pin = superadminPin;
-
+      const updateData = { lat, lng, radius: rad, office_ip: officeIp, emp_report_access: empReportAccess };
       const { error } = await this.supabase.from('config').update(updateData).eq('id', 1);
       if(error) throw error;
 
       Swal.fire({icon: 'success', title: 'บันทึกสำเร็จ', toast:true, position:'top-end', showConfirmButton:false, timer:1500});
-      document.getElementById('cfg-admin-pin').value = ''; 
-      if(document.getElementById('cfg-superadmin-pin')) document.getElementById('cfg-superadmin-pin').value = '';
     } catch(e) {
       Swal.fire('Error', e.message, 'error');
     }
@@ -972,7 +1113,29 @@ const app = {
     if (!hasIn) {
       btnGrid.innerHTML = `<button class="btn btn-success" onclick="app.submitAttendance('เข้างาน')"><i data-lucide="log-in"></i> บันทึกเข้างาน</button>`;
     } else if (hasIn && !hasOut) {
-      btnGrid.innerHTML = `<button class="btn btn-danger" onclick="app.submitAttendance('เลิกงาน')"><i data-lucide="log-out"></i> บันทึกเลิกงาน</button>`;
+      let canReport = false;
+      if (this.sysConfig && this.sysConfig.emp_report_access) {
+        if (this.sysConfig.emp_report_access === 'all') canReport = true;
+        else if (this.sysConfig.emp_report_access.startsWith('custom:')) {
+          const allowedNames = this.sysConfig.emp_report_access.replace('custom:', '').split(',').map(n => n.trim());
+          if (allowedNames.includes(name)) canReport = true;
+        }
+      }
+      
+      let reportHtml = '';
+      if (canReport) {
+        reportHtml = `
+          <div style="margin-bottom: 12px; text-align: left;">
+            <label style="font-size: 0.85em; color: var(--danger); font-weight: 600; margin-bottom: 4px; display: block;">* จำเป็นต้องกรอก: รายงานผลปฏิบัติงานวันนี้</label>
+            <textarea id="emp-report-input" class="form-control" rows="2" placeholder="พิมพ์รายงานที่นี่..." style="resize: vertical; min-height: 60px; font-size: 0.9em; padding: 10px; border: 1px solid var(--warning);"></textarea>
+          </div>
+        `;
+      }
+      btnGrid.innerHTML = `
+        <div style="grid-column: 1 / -1;">
+          ${reportHtml}
+          <button class="btn btn-danger" onclick="app.submitAttendance('เลิกงาน')"><i data-lucide="log-out"></i> บันทึกเลิกงาน</button>
+        </div>`;
     } else {
       btnGrid.innerHTML = `<button class="btn btn-outline" disabled style="color:var(--success); border-color:var(--success);"><i data-lucide="check-check"></i> บันทึกเวลาครบแล้ว</button>`;
     }
@@ -988,6 +1151,17 @@ const app = {
   },
 
   async submitAttendance(typeStr) {
+    let empReportText = '';
+    const reportInput = document.getElementById('emp-report-input');
+    
+    if (typeStr === 'เลิกงาน' && reportInput) {
+      empReportText = reportInput.value.trim();
+      if (empReportText === '') {
+        Swal.fire({ icon: 'warning', title: 'กรุณากรอกรายงาน', text: 'คุณต้องกรอกผลการปฏิบัติงานวันนี้ก่อน จึงจะสามารถบันทึกเลิกงานได้' });
+        return; 
+      }
+    }
+
     const btn = document.getElementById('modal-action-grid').querySelector('button');
     if(btn) { btn.disabled = true; btn.innerHTML = 'กำลังบันทึก...'; }
 
@@ -1005,7 +1179,8 @@ const app = {
           log_time: log_time,
           lat: this.currentLat ? String(this.currentLat) : '',
           lng: this.currentLng ? String(this.currentLng) : '',
-          map_link: mapLink
+          map_link: mapLink,
+          emp_report: empReportText
       }]);
       if (error) throw error;
 
@@ -1085,7 +1260,7 @@ const app = {
             if(!logs || logs.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">ไม่มีข้อมูล</td></tr>'; }
             else {
                 logs.forEach(l => {
-                    let action = role==='superadmin' ? `<td><button onclick="app.deleteLog(${l.id})" style="color:red; background:none; border:none;"><i data-lucide="trash-2" style="width:16px;"></i></button></td>` : '';
+                    let action = role==='superadmin' ? `<td style="text-align:center;"><button onclick="app.deleteLog(${l.id})" style="color:var(--danger); background:none; border:none; padding:4px;"><i data-lucide="trash-2" style="width:16px;"></i></button></td>` : '';
                     tbody.innerHTML += `<tr><td>${l.log_date}</td><td>${this.formatThaiTime(l.log_time)}</td><td>${l.name}</td><td class="${l.type==='เข้างาน'?'type-in':'type-out'}">${l.type}</td>${action}</tr>`;
                 });
                 lucide.createIcons({ root: tbody });
@@ -1100,9 +1275,9 @@ const app = {
             if(!users || users.length === 0) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">ไม่มีข้อมูลพนักงาน</td></tr>'; }
             else {
                 users.forEach(u => {
-                    let img = u.photo ? `<img src="${u.photo}" style="width:40px; height:40px; border-radius:10px; object-fit:cover;">` : `<div style="width:40px; height:40px; background:#e2e8f0; border-radius:10px;"></div>`;
-                    let action = role==='superadmin' ? `<td><button onclick="app.deleteUser(${u.id}, '${u.name}')" style="color:red; background:none; border:none;"><i data-lucide="trash-2" style="width:16px;"></i></button></td>` : '';
-                    tbody.innerHTML += `<tr><td>${img}</td><td>${u.name}</td>${action}</tr>`;
+                    let img = u.photo ? `<img src="${u.photo}" onclick="app.showImageModal('${u.photo}')" style="width:40px; height:40px; border-radius:10px; object-fit:cover; cursor:pointer;">` : `<div style="width:40px; height:40px; background:#e2e8f0; border-radius:10px;"></div>`;
+                    let action = role==='superadmin' ? `<td style="text-align:center;"><button onclick="app.deleteUser(${u.id}, '${u.name}')" style="color:var(--danger); background:none; border:none; padding:4px;"><i data-lucide="trash-2" style="width:16px;"></i></button></td>` : '';
+                    tbody.innerHTML += `<tr><td>${img}</td><td style="vertical-align:middle; font-weight:600;">${u.name}</td>${action}</tr>`;
                 });
                 lucide.createIcons({ root: tbody });
             }
@@ -1122,6 +1297,19 @@ const app = {
     if(confirm(`ลบข้อมูลใบหน้าของ ${name}?`)) {
         await this.supabase.from('users').delete().eq('id', id);
         this.loadReportData();
+    }
+  },
+
+  showImageModal(imgUrl) {
+    const modal = document.getElementById('imageModal');
+    document.getElementById('modalFullImage').src = imgUrl; 
+    modal.style.display = 'flex'; setTimeout(() => modal.classList.add('active'), 10);
+  },
+
+  closeImageModal(e) {
+    if (e && e.target.id === 'imageModal' || (e && e.target.closest('.image-modal-close'))) {
+      const modal = document.getElementById('imageModal');
+      modal.classList.remove('active'); setTimeout(() => modal.style.display = 'none', 300);
     }
   },
 

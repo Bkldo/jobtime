@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <!-- ตั้งค่า Viewport ให้เป็นเหมือนแอปพลิเคชัน (ซูมไม่ได้, เต็มจอ) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>ระบบบันทึกเวลาเข้างาน</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- นำเข้า Supabase JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <style>
+    /* ==========================================================================
+       APP-LIKE CSS STYLES
+       ========================================================================== */
+    :root {
+      --bg-main: #f0f4f8;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f8fafc;
+      --border-color: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --app-padding: 16px;
+    }
+
+    * { 
+      box-sizing: border-box; margin: 0; padding: 0;
+      /* ป้องกันการไฮไลท์ข้อความแบบในแอป */
+      -webkit-user-select: none; user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* อนุญาตให้พิมพ์ในช่อง Input ได้ */
+    input, textarea, select { -webkit-user-select: auto; user-select: auto; }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      overflow-x: hidden;
+    }
+
+    .app-header {
+      background: linear-gradient(135deg, #1e3a8a, #4f46e5);
+      color: white;
+      padding: calc(env(safe-area-inset-top) + 20px) 20px 30px;
+      border-bottom-left-radius: 30px;
+      border-bottom-right-radius: 30px;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 10px 25px rgba(79, 70, 229, 0.2);
+      margin-bottom: 20px;
+    }
+
+    .app-container {
+      width: 100%; max-width: 500px;
+      margin: 0 auto; padding: 0 var(--app-padding) 80px;
+    }
+
+    /* ซ่อน View */
+    .view { display: none; opacity: 0; transition: opacity 0.3s ease; }
+    .view.active { display: block; opacity: 1; animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+
+    @keyframes slideIn {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .card {
+      background: var(--bg-card); border-radius: 20px;
+      padding: 20px; margin-bottom: 16px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    }
+
+    /* App-like Menus */
+    .menu-item {
+      display: flex; align-items: center; gap: 16px;
+      padding: 16px; background: white; border-radius: 16px;
+      margin-bottom: 12px; cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+      transition: transform 0.1s;
+    }
+    .menu-item:active { transform: scale(0.98); background: #f8fafc; }
+    .menu-icon-wrapper {
+      width: 48px; height: 48px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center; color: white;
+    }
+
+    /* Buttons */
+    .btn {
+      width: 100%; border: none; border-radius: 14px; padding: 14px;
+      font-family: inherit; font-size: 16px; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+      color: white; transition: 0.2s;
+    }
+    .btn:active:not(:disabled) { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-primary { background: var(--primary); box-shadow: 0 4px 12px rgba(79,70,229,0.25); }
+    .btn-success { background: var(--success); box-shadow: 0 4px 12px rgba(16,185,129,0.25); }
+    .btn-danger  { background: var(--danger); box-shadow: 0 4px 12px rgba(239,68,68,0.25); }
+    .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-main); box-shadow: none; }
+
+    /* Forms */
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 0.9em; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
+    .form-control {
+      width: 100%; padding: 14px; border: 1px solid var(--border-color);
+      border-radius: 12px; font-family: inherit; font-size: 16px; background: #f8fafc;
+      outline: none; transition: 0.2s;
+    }
+    .form-control:focus { border-color: var(--primary); background: #ffffff; }
+
+    /* Video Scanner */
+    .video-container {
+      position: relative; width: 100%; border-radius: 20px; overflow: hidden;
+      background: #000; min-height: 350px; margin-bottom: 20px;
+    }
+    video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; position: absolute; top:0; left:0;}
+    .scan-line {
+      position: absolute; left: 0; right: 0; height: 4px; background: var(--success);
+      box-shadow: 0 0 15px var(--success); animation: scanAnim 2.5s linear infinite; display: none; z-index: 10;
+    }
+    .status-badge {
+      position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 8px 16px;
+      border-radius: 20px; font-size: 0.85em; color: white; z-index: 10;
+      display: flex; align-items: center; gap: 6px; white-space: nowrap; border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    /* App Top Nav */
+    .nav-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; background: white; position: sticky; top: 0; z-index: 50;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05); padding-top: env(safe-area-inset-top);
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0, 0.6); backdrop-filter: blur(4px);
+      display: none; align-items: flex-end; justify-content: center; z-index: 100;
+    }
+    .modal {
+      background: #ffffff; border-radius: 24px 24px 0 0; width: 100%; max-width: 500px;
+      padding: 30px 24px calc(env(safe-area-inset-bottom) + 20px); text-align: center;
+      animation: slideUpModal 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes slideUpModal { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    
+    @keyframes scanAnim { 0% { top: 5%; } 50% { top: 95%; } 100% { top: 5%; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .table-container { overflow-x: auto; border-radius: 12px; background: white; border: 1px solid var(--border-color); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+    th, td { padding: 12px; border-bottom: 1px solid var(--border-color); text-align: left; }
+    th { background: #f8fafc; font-weight: 600; color: var(--text-muted); }
+
+  </style>
+</head>
+<body>
+
+<!-- SETUP SUPABASE SCREEN (โชว์ครั้งแรกเท่านั้น) -->
+<div id="view-setup" class="view" style="min-height: 100vh; background: white; display: flex; flex-direction: column; justify-content: center; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <div style="width: 80px; height: 80px; background: #10b981; border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: white;">
+            <i data-lucide="database" style="width: 40px; height: 40px;"></i>
+        </div>
+        <h1 style="font-size: 1.5em; font-weight: 700; color: #0f172a;">เชื่อมต่อฐานข้อมูล</h1>
+        <p style="color: #64748b; font-size: 0.9em; margin-top: 5px;">ใส่ข้อมูล API จากระบบ Supabase</p>
+    </div>
+    
+    <div class="form-group">
+        <label>Supabase Project URL</label>
+        <input type="text" id="setup-url" class="form-control" placeholder="https://xxxxx.supabase.co">
+    </div>
+    <div class="form-group mb-6">
+        <label>Supabase Anon Key (API Key)</label>
+        <textarea id="setup-key" class="form-control" rows="3" placeholder="eyJhbGciOiJIUzI1..."></textarea>
+    </div>
+    <button class="btn btn-success" onclick="app.saveSupabaseConfig()">
+        <i data-lucide="check-circle"></i> บันทึกและเริ่มใช้งาน
+    </button>
+</div>
+
+<!-- =========================================================
+     VIEW: HOME (MAIN MENU)
+     ========================================================= -->
+<div id="view-home" class="view">
+  <div class="app-header">
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
+        <button onclick="app.showAdminLogin()" style="background: rgba(255,255,255,0.2); border: none; padding: 8px; border-radius: 50%; color: white;">
+            <i data-lucide="settings" style="width: 20px; height: 20px;"></i>
+        </button>
+    </div>
+    <div style="background: white; width: 70px; height: 70px; border-radius: 20px; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; color: var(--primary);">
+        <i data-lucide="scan-face" style="width: 40px; height: 40px;"></i>
+    </div>
+    <h1 style="font-size: 1.6em; font-weight: 700;">ระบบบันทึกเวลาทำงาน</h1>
+    <p style="opacity: 0.8; font-size: 0.9em; margin-top: 4px;">Face ID & GPS App</p>
+  </div>
+
+  <div class="app-container">
+    <div class="menu-item" onclick="app.navigate('view-scan')">
+      <div class="menu-icon-wrapper" style="background: linear-gradient(135deg, #10b981, #059669);">
+        <i data-lucide="camera" style="width: 24px; height: 24px;"></i>
+      </div>
+      <div style="flex: 1;">
+        <div style="font-weight: 700; font-size: 1.1em;">สแกนเข้า/เลิกงาน</div>
+        <div style="color: var(--text-muted); font-size: 0.85em;">ระบบตรวจจับใบหน้าอัตโนมัติ</div>
+      </div>
+      <i data-lucide="chevron-right" style="color: #cbd5e1;"></i>
+    </div>
+
+    <div class="menu-item" onclick="app.navigate('view-register')">
+      <div class="menu-icon-wrapper" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+        <i data-lucide="user-plus" style="width: 24px; height: 24px;"></i>
+      </div>
+      <div style="flex: 1;">
+        <div style="font-weight: 700; font-size: 1.1em;">ลงทะเบียนใบหน้า</div>
+        <div style="color: var(--text-muted); font-size: 0.85em;">เพิ่มพนักงานใหม่เข้าระบบ</div>
+      </div>
+      <i data-lucide="chevron-right" style="color: #cbd5e1;"></i>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     VIEW: SCAN (ATTENDANCE)
+     ========================================================= -->
+<div id="view-scan" class="view" style="background: black; min-height: 100vh;">
+  <div class="nav-bar" style="background: transparent; color: white;">
+    <button onclick="app.navigate('view-home')" style="background: rgba(255,255,255,0.2); border:none; color:white; padding: 8px 12px; border-radius: 12px; display: flex; align-items: center; gap: 6px;">
+      <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> กลับ
+    </button>
+  </div>
+
+  <div class="video-container" style="border-radius: 0; height: calc(100vh - 150px); margin-bottom: 0;">
+    <div class="status-badge" id="scan-badge">
+      <i data-lucide="camera" style="width: 16px; height: 16px;"></i> เตรียมกล้อง...
+    </div>
+    <div class="scan-line" id="scan-line"></div>
+    <video id="scan-video" autoplay muted playsinline></video>
+  </div>
+
+  <div style="padding: 20px; background: white; border-radius: 24px 24px 0 0; position: fixed; bottom: 0; width: 100%; text-align: center;">
+    <div id="scan-gps-status" style="font-size: 0.9em; color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+        <i data-lucide="map-pin" style="width: 16px; height: 16px;"></i> ตรวจสอบตำแหน่ง...
+    </div>
+    <button id="btn-start-scan" class="btn btn-primary" onclick="app.startScanning()" disabled style="padding: 16px;">
+      <i data-lucide="scan" style="width: 20px; height: 20px;"></i> เริ่มสแกนใบหน้า
+    </button>
+  </div>
+</div>
+
+<!-- =========================================================
+     VIEW: REGISTER
+     ========================================================= -->
+<div id="view-register" class="view">
+  <div class="nav-bar">
+    <button onclick="app.navigate('view-home')" style="background: none; border:none; display: flex; align-items: center; gap: 6px; font-weight: 600;">
+      <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> กลับ
+    </button>
+    <span style="font-weight: 700;">ลงทะเบียน</span>
+    <div style="width: 60px;"></div>
+  </div>
+
+  <div class="app-container" style="padding-top: 20px;">
+    <div class="video-container" style="min-height: 280px; border-radius: 20px;">
+      <div class="status-badge" id="reg-badge"><i data-lucide="camera" style="width: 16px; height: 16px;"></i> เตรียมกล้อง...</div>
+      <video id="reg-video" autoplay muted playsinline></video>
+    </div>
+
+    <div class="card">
+      <div class="form-group">
+        <label>ชื่อ-นามสกุล</label>
+        <input type="text" id="reg-name" class="form-control" placeholder="พิมพ์ชื่อพนักงานที่นี่">
+      </div>
+      <div style="text-align: center; margin-bottom: 16px; font-size: 0.85em; color: var(--warning);">
+        * ขยับหน้าช้าๆ ถ่าย 3 มุม (หน้าตรง/ซ้าย/ขวา)
+      </div>
+      <button id="btn-save-face" class="btn btn-primary" onclick="app.registerFace()" disabled>
+        <i data-lucide="save"></i> บันทึกใบหน้า <span id="reg-count" style="background: rgba(0,0,0,0.2); padding: 2px 8px; border-radius: 10px; margin-left: 6px;">0/3</span>
+      </button>
+      <div id="reg-msg" style="margin-top: 12px; text-align: center; font-size: 0.9em;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     VIEW: ADMIN LOGIN
+     ========================================================= -->
+<div id="view-admin-login" class="view">
+  <div class="nav-bar">
+    <button onclick="app.navigate('view-home')" style="background: none; border:none; display: flex; align-items: center; gap: 6px; font-weight: 600;">
+      <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> กลับ
+    </button>
+  </div>
+  <div class="app-container" style="padding-top: 40px;">
+    <div class="card" style="text-align: center; padding: 40px 20px;">
+      <i data-lucide="shield-check" style="width: 50px; height: 50px; color: var(--primary); margin: 0 auto 20px;"></i>
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label>รหัสผ่าน Admin / Superadmin</label>
+        <input type="password" id="admin-pin" class="form-control" placeholder="••••••••" style="text-align: center; letter-spacing: 3px; font-size: 1.2em;">
+      </div>
+      <button id="btn-verify-admin" class="btn btn-primary" onclick="app.verifyAdmin()">เข้าสู่ระบบ</button>
+      <div id="admin-login-msg" style="color: var(--danger); font-size: 0.9em; margin-top: 12px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     VIEW: ADMIN DASHBOARD
+     ========================================================= -->
+<div id="view-admin-dashboard" class="view">
+  <div class="nav-bar">
+    <span style="font-weight: 700; font-size: 1.1em;">แผงควบคุม <span id="dash-role-badge" style="font-size: 0.7em; background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 6px;">Admin</span></span>
+    <button onclick="app.adminLogout()" style="background: #f1f5f9; border:none; padding: 6px 12px; border-radius: 8px; font-size: 0.9em; color: var(--danger);">
+      ออกจากระบบ
+    </button>
+  </div>
+  <div class="app-container" style="padding-top: 20px;">
+    <div class="menu-item" onclick="app.navigate('view-report')">
+      <div class="menu-icon-wrapper" style="background: #3b82f6;"><i data-lucide="file-text"></i></div>
+      <div style="flex: 1;"><div style="font-weight: 700;">รายงานการทำงาน</div><div style="color: var(--text-muted); font-size: 0.85em;">ดูประวัติเข้า-เลิกงาน</div></div>
+    </div>
+    <div class="menu-item" onclick="app.navigate('view-config')">
+      <div class="menu-icon-wrapper" style="background: #64748b;"><i data-lucide="settings"></i></div>
+      <div style="flex: 1;"><div style="font-weight: 700;">ตั้งค่าระบบ & GPS</div><div style="color: var(--text-muted); font-size: 0.85em;">จุดพิกัด, สิทธิ์, Wi-Fi</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     VIEW: CONFIG
+     ========================================================= -->
+<div id="view-config" class="view">
+  <div class="nav-bar">
+    <button onclick="app.navigate('view-admin-dashboard')" style="background: none; border:none; display: flex; align-items: center; gap: 6px; font-weight: 600;">
+      <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> กลับ
+    </button>
+    <span style="font-weight: 700;">ตั้งค่าระบบ</span>
+    <div style="width: 60px;"></div>
+  </div>
+  <div class="app-container" style="padding-top: 20px;">
+    
+    <div class="card">
+      <div style="font-weight: 700; color: var(--success); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;"><i data-lucide="map"></i> พิกัด GPS</div>
+      <button class="btn btn-outline" style="margin-bottom: 16px; padding: 10px;" onclick="app.getAdminLocation()">ดึงพิกัดปัจจุบัน</button>
+      <div style="display: flex; gap: 10px;">
+        <div class="form-group" style="flex: 1;"><label>Lat</label><input type="number" id="cfg-lat" class="form-control" style="padding: 10px;"></div>
+        <div class="form-group" style="flex: 1;"><label>Lng</label><input type="number" id="cfg-lng" class="form-control" style="padding: 10px;"></div>
+      </div>
+      <div class="form-group">
+        <label>ระยะอนุญาต (เมตร) *ใส่ 0 เพื่อปิด</label>
+        <input type="number" id="cfg-rad" class="form-control">
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight: 700; color: var(--warning); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;"><i data-lucide="wifi"></i> Wi-Fi ออฟฟิศ (ข้าม GPS)</div>
+      <div class="form-group">
+        <label>Public IP</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="cfg-ip" class="form-control">
+          <button class="btn btn-outline" style="width: auto; padding: 0 16px;" onclick="app.getAdminIP()">ดึง IP</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="wrap-superadmin-pin">
+        <div style="font-weight: 700; color: var(--danger); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;"><i data-lucide="lock"></i> ความปลอดภัย (Superadmin)</div>
+        <div class="form-group">
+            <label>เปลี่ยนรหัส Admin</label>
+            <input type="text" id="cfg-admin-pin" class="form-control" placeholder="เว้นว่างถ้าไม่เปลี่ยน">
+        </div>
+        <div class="form-group">
+            <label>เปลี่ยนรหัส Superadmin</label>
+            <input type="text" id="cfg-superadmin-pin" class="form-control" placeholder="เว้นว่างถ้าไม่เปลี่ยน">
+        </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="app.saveConfig()" id="btn-save-cfg"><i data-lucide="save"></i> บันทึกการตั้งค่า</button>
+    <div id="cfg-msg" style="text-align: center; margin-top: 16px; font-size: 0.9em;"></div>
+  </div>
+</div>
+
+<!-- =========================================================
+     VIEW: REPORT (ADMIN) - ยุบรวมหน้าประวัติไว้ด้วยกัน
+     ========================================================= -->
+<div id="view-report" class="view">
+  <div class="nav-bar">
+    <button onclick="app.navigate('view-admin-dashboard')" style="background: none; border:none; display: flex; align-items: center; gap: 6px; font-weight: 600;">
+      <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> กลับ
+    </button>
+    <span style="font-weight: 700;">รายงาน</span>
+    <div style="width: 60px;"></div>
+  </div>
+  <div class="app-container" style="padding-top: 20px;">
+    
+    <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 16px;">
+        <button class="btn btn-primary" style="width: auto; flex-shrink: 0; padding: 8px 16px; border-radius: 20px; font-size: 0.9em;" id="tab-btn-daily" onclick="app.switchReportTab('daily')">สรุปรายวัน</button>
+        <button class="btn btn-outline" style="width: auto; flex-shrink: 0; padding: 8px 16px; border-radius: 20px; font-size: 0.9em;" id="tab-btn-detail" onclick="app.switchReportTab('detail')">ประวัติทั้งหมด</button>
+        <button class="btn btn-outline" style="width: auto; flex-shrink: 0; padding: 8px 16px; border-radius: 20px; font-size: 0.9em;" id="tab-btn-employee" onclick="app.switchReportTab('employee')">ข้อมูลพนักงาน</button>
+    </div>
+
+    <!-- Filter กลาง -->
+    <div id="filter-box" class="card" style="display: flex; gap: 8px;">
+        <input type="date" id="report-date" class="form-control" style="padding: 10px;">
+        <button class="btn btn-primary" style="width: 50px; padding: 0;" onclick="app.loadReportData()"><i data-lucide="search"></i></button>
+    </div>
+
+    <div id="report-status" style="text-align: center; padding: 20px; color: var(--text-muted); display: none;">กำลังโหลด...</div>
+
+    <!-- Tab: Daily -->
+    <div id="tab-daily" style="display: block;">
+        <div class="table-container">
+            <table id="daily-table">
+                <thead><tr><th>ชื่อพนักงาน</th><th>เข้า</th><th>เลิก</th></tr></thead>
+                <tbody id="daily-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tab: Detail (History) -->
+    <div id="tab-detail" style="display: none;">
+        <div class="table-container">
+            <table id="detail-table">
+                <thead><tr><th>วันที่</th><th>เวลา</th><th>ชื่อ</th><th>สถานะ</th><th class="super-only" style="display:none;">ลบ</th></tr></thead>
+                <tbody id="detail-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tab: Employee -->
+    <div id="tab-employee" style="display: none;">
+        <div class="table-container">
+            <table id="employee-table">
+                <thead><tr><th>รูป</th><th>ชื่อ</th><th class="super-only" style="display:none;">ลบ</th></tr></thead>
+                <tbody id="employee-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- =========================================================
+     MODAL: CLOCK IN / OUT CONFIRMATION (BOTTOM SHEET STYLE)
+     ========================================================= -->
+<div class="modal-backdrop" id="scan-modal">
+  <div class="modal">
+    <div style="width: 40px; height: 5px; background: #cbd5e1; border-radius: 5px; margin: -10px auto 20px;"></div>
+    <div style="width: 60px; height: 60px; background: #e0e7ff; color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+        <i data-lucide="user-check" style="width: 30px; height: 30px;"></i>
+    </div>
+    <div style="color: var(--text-muted); font-size: 0.9em; margin-bottom: 4px;">ตรวจพบบุคคล</div>
+    <div id="modal-user-name" style="font-size: 1.6em; font-weight: 700; color: #1e293b; margin-bottom: 20px;">-</div>
+
+    <div id="modal-time-log" style="display: flex; gap: 10px; margin-bottom: 20px; display: none;"></div>
+
+    <div id="modal-action-grid" style="margin-bottom: 12px;"></div>
+    <button class="btn btn-outline" onclick="app.closeModal()" style="border: none; color: var(--danger); background: #fee2e2;">ไม่ใช่ฉัน (ยกเลิก)</button>
+  </div>
+</div>
+
+<!-- =========================================================
+     APPLICATION LOGIC (JAVASCRIPT) - SUPABASE INTEGRATION
+     ========================================================= -->
+<script>
+// --- CORE APP LOGIC ---
+const MATCH_THRESHOLD = 0.48; 
+
+const app = {
+  currentView: 'view-setup',
+  supabase: null,
+  modelsLoaded: false,
+  knownFaces: [],
+  currentStream: null,
+  scanInterval: null, 
+  currentLat: null,
+  currentLng: null,
+  matchedName: null,
+  regCounter: 0,
+  sysConfig: null,
+
+  formatThaiTime(timeStr) {
+    if(!timeStr) return '-';
+    // รองรับ time จาก postgres (HH:mm:ss)
+    const parts = String(timeStr).split(':');
+    if (parts.length >= 2) return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')} น.`;
+    return timeStr;
+  },
+
+  setHtmlAndIcons(elId, htmlStr) {
+    const el = document.getElementById(elId);
+    if(el) { el.innerHTML = htmlStr; lucide.createIcons({ root: el }); }
+  },
+
+  async init() {
+    lucide.createIcons();
+    
+    // ตรวจสอบว่าเคยตั้งค่า Supabase หรือยัง
+    const supaUrl = localStorage.getItem('supaUrl');
+    const supaKey = localStorage.getItem('supaKey');
+
+    if (supaUrl && supaKey) {
+        // มีข้อมูลแล้ว เชื่อมต่อเลย
+        try {
+            this.supabase = window.supabase.createClient(supaUrl, supaKey);
+            this.navigate('view-home');
+        } catch(e) {
+            localStorage.removeItem('supaUrl');
+            localStorage.removeItem('supaKey');
+            this.navigate('view-setup');
+        }
+    } else {
+        // ให้ผู้ใช้ตั้งค่า
+        this.navigate('view-setup');
+    }
+  },
+
+  async saveSupabaseConfig() {
+      const url = document.getElementById('setup-url').value.trim();
+      const key = document.getElementById('setup-key').value.trim();
+      if(!url || !key) return Swal.fire('แจ้งเตือน', 'กรุณาใส่ข้อมูลให้ครบถ้วน', 'warning');
+      
+      try {
+          this.supabase = window.supabase.createClient(url, key);
+          // ทดสอบการเชื่อมต่อด้วยการดึง config
+          const { data, error } = await this.supabase.from('config').select('*').limit(1);
+          if(error) throw error;
+
+          localStorage.setItem('supaUrl', url);
+          localStorage.setItem('supaKey', key);
+          Swal.fire({icon:'success', title:'เชื่อมต่อสำเร็จ!', showConfirmButton:false, timer:1500});
+          this.navigate('view-home');
+      } catch(e) {
+          Swal.fire('เชื่อมต่อล้มเหลว', e.message, 'error');
+      }
+  },
+
+  navigate(viewId) {
+    this.stopCamera();
+    if(this.scanInterval) { clearTimeout(this.scanInterval); this.scanInterval = null; }
+
+    document.querySelectorAll('.view').forEach(el => {
+        el.classList.remove('active');
+        setTimeout(() => { if(!el.classList.contains('active')) el.style.display = 'none'; }, 300);
+    });
+    
+    const target = document.getElementById(viewId);
+    target.style.display = (viewId === 'view-scan') ? 'block' : 'flex';
+    if(viewId !== 'view-setup') target.style.flexDirection = 'column';
+    setTimeout(() => target.classList.add('active'), 10);
+    
+    this.currentView = viewId;
+
+    if(viewId === 'view-scan') this.initScanView();
+    if(viewId === 'view-register') this.initRegisterView();
+    if(viewId === 'view-config') this.loadConfigData();
+    if(viewId === 'view-report') this.switchReportTab('daily');
+    if(viewId === 'view-admin-dashboard') {
+        const role = localStorage.getItem('adminRole');
+        const badge = document.getElementById('dash-role-badge');
+        if(role === 'superadmin') { badge.innerText = '⭐ Superadmin'; badge.style.background = '#fef08a'; badge.style.color = '#b45309'; } 
+        else { badge.innerText = 'Admin'; badge.style.background = '#e2e8f0'; badge.style.color = '#475569'; }
+    }
+  },
+
+  async loadAIModels(badgeId) {
+    if(this.modelsLoaded) {
+      this.setHtmlAndIcons(badgeId, '<i data-lucide="check-circle-2" style="color:var(--success);"></i> AI พร้อม');
+      return true;
+    }
+    this.setHtmlAndIcons(badgeId, '<svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> โหลด AI...');
+    const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+    try {
+      await Promise.all([
+        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+      ]);
+      this.modelsLoaded = true;
+      this.setHtmlAndIcons(badgeId, '<i data-lucide="check-circle-2" style="color:var(--success);"></i> AI พร้อม');
+      return true;
+    } catch (e) {
+      this.setHtmlAndIcons(badgeId, '<i data-lucide="x-circle" style="color:var(--danger);"></i> โหลด AI ล้มเหลว');
+      throw new Error("โหลด AI ล้มเหลว");
+    }
+  },
+
+  stopCamera() {
+    if (this.currentStream) {
+      this.currentStream.getTracks().forEach(track => track.stop());
+      this.currentStream = null;
+    }
+  },
+
+  // ---------------------------------------------------------
+  // ADMIN AUTH & CONFIG
+  // ---------------------------------------------------------
+  showAdminLogin() { 
+    const expiry = localStorage.getItem('adminExpiry');
+    if (expiry && Date.now() < parseInt(expiry, 10)) {
+      this.navigate('view-admin-dashboard'); 
+    } else {
+      localStorage.removeItem('adminExpiry'); localStorage.removeItem('adminRole');
+      this.navigate('view-admin-login'); 
+    }
+  },
+  
+  async verifyAdmin() {
+    const pin = document.getElementById('admin-pin').value;
+    const msgEl = document.getElementById('admin-login-msg');
+    if(!pin) return msgEl.innerText = 'กรุณาใส่รหัสผ่าน';
+
+    const btn = document.getElementById('btn-verify-admin');
+    btn.disabled = true; msgEl.innerText = 'กำลังตรวจสอบ...';
+
+    try {
+      const { data: config, error } = await this.supabase.from('config').select('admin_pin, superadmin_pin').eq('id', 1).single();
+      if(error) throw error;
+      
+      const adminPin = config.admin_pin || 'admin123';
+      const superPin = config.superadmin_pin || 'super123';
+
+      if (pin === superPin) {
+        localStorage.setItem('adminRole', 'superadmin');
+        localStorage.setItem('adminExpiry', Date.now() + 3600000);
+        document.getElementById('admin-pin').value = '';
+        this.navigate('view-admin-dashboard');
+      } else if (pin === adminPin) {
+        localStorage.setItem('adminRole', 'admin');
+        localStorage.setItem('adminExpiry', Date.now() + 3600000);
+        document.getElementById('admin-pin').value = '';
+        this.navigate('view-admin-dashboard');
+      } else {
+        msgEl.innerText = 'รหัสผ่านไม่ถูกต้อง';
+      }
+    } catch(e) {
+      msgEl.innerText = 'เชื่อมต่อฐานข้อมูลล้มเหลว';
+    }
+    btn.disabled = false;
+  },
+  
+  adminLogout() { 
+    localStorage.removeItem('adminExpiry'); localStorage.removeItem('adminRole');
+    this.navigate('view-home'); 
+  },
+
+  async loadConfigData() {
+    const role = localStorage.getItem('adminRole');
+    const wrapSuperAdmin = document.getElementById('wrap-superadmin-pin');
+    if (wrapSuperAdmin) wrapSuperAdmin.style.display = (role === 'superadmin') ? 'block' : 'none';
+
+    try {
+      const { data, error } = await this.supabase.from('config').select('*').eq('id', 1).single();
+      if(error && error.code !== 'PGRST116') throw error; // PGRST116 is no rows returned
+
+      if (data) {
+          document.getElementById('cfg-lat').value = data.lat || '';
+          document.getElementById('cfg-lng').value = data.lng || '';
+          document.getElementById('cfg-rad').value = data.radius || '0';
+          document.getElementById('cfg-ip').value = data.office_ip || '';
+      }
+    } catch(e) { console.error('Config fetch error', e); }
+  },
+
+  getAccurateLocation() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) return reject(new Error('Device ไม่รองรับ GPS'));
+      let bestPos = null;
+      let watchId = navigator.geolocation.watchPosition(
+        pos => {
+          if (!bestPos || pos.coords.accuracy < bestPos.coords.accuracy) bestPos = pos;
+          if (bestPos.coords.accuracy <= 15) {
+            navigator.geolocation.clearWatch(watchId); clearTimeout(timeoutId); resolve(bestPos);
+          }
+        },
+        err => {
+          if (!bestPos) { navigator.geolocation.clearWatch(watchId); clearTimeout(timeoutId); reject(new Error('กรุณาเปิด GPS')); }
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+      let timeoutId = setTimeout(() => {
+        navigator.geolocation.clearWatch(watchId);
+        if (bestPos) resolve(bestPos); else reject(new Error('ค้นหา GPS ไม่สำเร็จ'));
+      }, 8000);
+    });
+  },
+
+  async getAdminLocation() {
+    try {
+      const pos = await this.getAccurateLocation();
+      document.getElementById('cfg-lat').value = pos.coords.latitude;
+      document.getElementById('cfg-lng').value = pos.coords.longitude;
+      Swal.fire({ icon: 'success', title: 'ดึงพิกัดสำเร็จ', toast:true, position:'top-end', showConfirmButton:false, timer:1500 });
+    } catch(e) { Swal.fire('ดึงพิกัดไม่ได้', e.message, 'error'); }
+  },
+
+  async getAdminIP() {
+    try {
+      const res = await fetch('https://api.ipify.org?format=json');
+      const data = await res.json();
+      document.getElementById('cfg-ip').value = data.ip;
+    } catch(e) { Swal.fire('ดึง IP ไม่ได้', '', 'error'); }
+  },
+
+  async saveConfig() {
+    const lat = document.getElementById('cfg-lat').value;
+    const lng = document.getElementById('cfg-lng').value;
+    const rad = document.getElementById('cfg-rad').value;
+    const officeIp = document.getElementById('cfg-ip').value.trim();
+    const adminPin = document.getElementById('cfg-admin-pin').value.trim();
+    const superadminPin = document.getElementById('cfg-superadmin-pin') ? document.getElementById('cfg-superadmin-pin').value.trim() : '';
+    
+    const btn = document.getElementById('btn-save-cfg');
+    btn.disabled = true;
+
+    try {
+      const updateData = { lat, lng, radius: rad, office_ip: officeIp };
+      if (adminPin) updateData.admin_pin = adminPin;
+      if (superadminPin) updateData.superadmin_pin = superadminPin;
+
+      const { error } = await this.supabase.from('config').update(updateData).eq('id', 1);
+      if(error) throw error;
+
+      Swal.fire({icon: 'success', title: 'บันทึกสำเร็จ', toast:true, position:'top-end', showConfirmButton:false, timer:1500});
+      document.getElementById('cfg-admin-pin').value = ''; 
+      if(document.getElementById('cfg-superadmin-pin')) document.getElementById('cfg-superadmin-pin').value = '';
+    } catch(e) {
+      Swal.fire('Error', e.message, 'error');
+    }
+    btn.disabled = false;
+  },
+
+  // ---------------------------------------------------------
+  // REGISTER
+  // ---------------------------------------------------------
+  async initRegisterView() {
+    this.regCounter = 0;
+    document.getElementById('reg-name').value = '';
+    document.getElementById('reg-name').disabled = false; 
+    document.getElementById('reg-msg').innerText = '';
+    
+    const btn = document.getElementById('btn-save-face');
+    btn.disabled = true; btn.innerHTML = '<i data-lucide="save"></i> บันทึกใบหน้า <span style="background:rgba(0,0,0,0.2); border-radius:10px; padding:2px 8px; margin-left:5px;">0/3</span>';
+
+    const pAI = this.loadAIModels('reg-badge');
+    const pCamera = navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } }).then(async stream => {
+      this.currentStream = stream;
+      const video = document.getElementById('reg-video');
+      video.srcObject = stream;
+      await video.play().catch(e=>{});
+    }).catch(e => { throw new Error('เปิดกล้องไม่ได้'); });
+
+    try {
+      await Promise.all([pAI, pCamera]);
+      this.setHtmlAndIcons('reg-badge', '<i data-lucide="camera" style="width: 16px; height: 16px;"></i> กล้องและ AI พร้อมใช้งาน');
+      btn.disabled = false; 
+    } catch(e) {
+      this.setHtmlAndIcons('reg-badge', `<i data-lucide="alert-circle" style="color:var(--danger);"></i> ${e.message}`);
+    }
+  },
+
+  async registerFace() {
+    if (this.regCounter >= 3) return;
+
+    const nameInput = document.getElementById('reg-name');
+    const name = nameInput.value.trim();
+    if(!name) return Swal.fire('แจ้งเตือน', 'กรุณาระบุชื่อพนักงาน', 'warning');
+
+    const btn = document.getElementById('btn-save-face');
+    btn.disabled = true;
+
+    if (this.regCounter === 0) {
+      btn.innerHTML = 'ตรวจสอบสิทธิ์...';
+      try {
+        const { data: existing, error } = await this.supabase.from('users').select('name').eq('name', name);
+        if (existing && existing.length > 0) {
+          Swal.fire('ผิดพลาด', `ชื่อ "${name}" ถูกลงทะเบียนไปแล้ว`, 'error');
+          btn.innerHTML = '<i data-lucide="save"></i> บันทึกใบหน้า'; btn.disabled = false; lucide.createIcons(); return;
+        }
+      } catch(e) {}
+    }
+
+    btn.innerHTML = 'กำลังประมวลผล...';
+    const video = document.getElementById('reg-video');
+    const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+
+    if(!detection) {
+      Swal.fire({toast:true, title:'ไม่พบใบหน้า กรุณามองกล้อง', position:'top', icon:'error', showConfirmButton:false, timer:2000});
+      btn.innerHTML = '<i data-lucide="save"></i> บันทึกมุมต่อไป'; btn.disabled = false; lucide.createIcons(); return;
+    }
+
+    let photoBase64 = null;
+    if (this.regCounter === 0) {
+      const canvas = document.createElement('canvas');
+      const scale = 250 / Math.max(video.videoWidth, video.videoHeight); 
+      canvas.width = video.videoWidth * scale; canvas.height = video.videoHeight * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.translate(canvas.width, 0); ctx.scale(-1, 1);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      photoBase64 = canvas.toDataURL('image/jpeg', 0.6); 
+    }
+
+    try {
+      const insertData = { name: name, face_descriptor: Array.from(detection.descriptor) };
+      if(photoBase64) insertData.photo = photoBase64;
+
+      const { error } = await this.supabase.from('users').insert([insertData]);
+      if(error) throw error;
+      
+      this.regCounter++;
+      nameInput.disabled = true; 
+      
+      if(this.regCounter >= 3) {
+        Swal.fire({icon: 'success', title: 'ลงทะเบียนครบถ้วน!', showConfirmButton: false, timer: 2000});
+        setTimeout(() => this.navigate('view-home'), 2000);
+      } else {
+        Swal.fire({toast:true, title:`บันทึกมุมที่ ${this.regCounter} สำเร็จ`, text:'ขยับหน้าเล็กน้อยแล้วกดอีกครั้ง', position:'top', icon:'success', showConfirmButton:false, timer:2000});
+        btn.innerHTML = `<i data-lucide="save"></i> บันทึกมุมต่อไป <span style="background:rgba(0,0,0,0.2); border-radius:10px; padding:2px 8px; margin-left:5px;">${this.regCounter}/3</span>`; 
+        btn.disabled = false; lucide.createIcons();
+      }
+    } catch(e) {
+      Swal.fire('Error', e.message, 'error');
+      btn.innerHTML = '<i data-lucide="save"></i> ลองอีกครั้ง'; btn.disabled = false; lucide.createIcons();
+    }
+  },
+
+  // ---------------------------------------------------------
+  // SCAN
+  // ---------------------------------------------------------
+  async initScanView() {
+    document.getElementById('btn-start-scan').disabled = true;
+    document.getElementById('scan-line').style.display = 'none';
+
+    this.setHtmlAndIcons('scan-gps-status', '<svg class="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ตรวจสอบพิกัด...');
+
+    const pCamera = navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } }).then(async stream => {
+      this.currentStream = stream;
+      const video = document.getElementById('scan-video');
+      video.srcObject = stream;
+      await video.play().catch(e=>{}); 
+    }).catch(e => { throw new Error('เปิดกล้องไม่ได้'); });
+
+    const pGPS = this.checkGPS();
+    const pAI = this.loadAIModels('scan-badge');
+    const pDB = this.supabase.from('users').select('name, face_descriptor')
+      .then(({data, error}) => {
+        if(error || !data || data.length===0) throw new Error("ไม่พบข้อมูลพนักงาน");
+        this.knownFaces = data.map(u => ({ name: u.name, descriptor: new Float32Array(u.face_descriptor) }));
+      });
+
+    try {
+      await Promise.all([pCamera, pGPS, pAI, pDB]);
+      document.getElementById('btn-start-scan').disabled = false;
+      this.setHtmlAndIcons('scan-badge', '<i data-lucide="scan" style="width: 16px; height: 16px;"></i> พร้อมแล้ว แตะปุ่มเริ่มสแกน');
+    } catch(e) {
+      Swal.fire({toast:true, title:e.message, icon:'error', position:'top'});
+      this.setHtmlAndIcons('scan-badge', '<i data-lucide="alert-circle" style="color:var(--danger);"></i> ' + e.message);
+    }
+  },
+
+  async checkGPS() {
+    try {
+      const { data: config } = await this.supabase.from('config').select('*').eq('id', 1).single();
+      const ipRes = await fetch('https://api.ipify.org?format=json').catch(() => null);
+      const ipData = ipRes ? await ipRes.json() : { ip: null };
+
+      this.sysConfig = config || {};
+
+      if (config && config.office_ip && ipData.ip === config.office_ip) {
+        this.currentLat = config.lat || 0; this.currentLng = config.lng || 0;
+        this.setHtmlAndIcons('scan-gps-status', `<i data-lucide="wifi" style="width: 16px; height: 16px;"></i> ใช้ Wi-Fi ออฟฟิศ`);
+        return; 
+      }
+
+      const pos = await this.getAccurateLocation();
+      this.currentLat = pos.coords.latitude; this.currentLng = pos.coords.longitude;
+      const accuracy = Math.round(pos.coords.accuracy);
+
+      if (!config || !config.lat || !config.lng || config.radius == 0) {
+        this.setHtmlAndIcons('scan-gps-status', `<i data-lucide="map" style="width: 16px; height: 16px;"></i> นอกพื้นที่ (±${accuracy}ม.)`);
+        return; 
+      }
+      
+      const dist = this.haversine(this.currentLat, this.currentLng, config.lat, config.lng);
+      let allowance = (accuracy > 10 && accuracy < 60) ? Math.min(accuracy * 0.3, 20) : 0;
+      const effectiveDist = Math.max(0, dist - allowance);
+
+      if (effectiveDist <= config.radius) {
+        this.setHtmlAndIcons('scan-gps-status', `<i data-lucide="map-pin" style="width: 16px; height: 16px;"></i> อยู่ในพื้นที่ (${Math.round(dist)}ม.)`);
+      } else {
+        throw new Error(`อยู่นอกพื้นที่กำหนด (${Math.round(dist)} ม.)`);
+      }
+    } catch(e) {
+      throw new Error(e.message || 'ตรวจสอบ GPS ล้มเหลว');
+    }
+  },
+
+  async startScanning() {
+    document.getElementById('btn-start-scan').style.display = 'none';
+    this.setHtmlAndIcons('scan-badge', '<i data-lucide="scan-face" style="width: 16px; height: 16px;"></i> กำลังสแกน...');
+    document.getElementById('scan-line').style.display = 'block';
+
+    const video = document.getElementById('scan-video');
+
+    const scanFrame = async () => {
+      if (this.currentView !== 'view-scan' || video.paused || video.ended) return;
+      try {
+        const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
+        const detection = await faceapi.detectSingleFace(video, options).withFaceLandmarks().withFaceDescriptor();
+        
+        if (detection) {
+          let best = { name: 'unknown', distance: 1.0 };
+          this.knownFaces.forEach(u => {
+            const d = faceapi.euclideanDistance(detection.descriptor, u.descriptor);
+            if(d < best.distance) best = { name: u.name, distance: d };
+          });
+
+          if (best.distance < MATCH_THRESHOLD) {
+            if(this.scanInterval) clearTimeout(this.scanInterval);
+            this.showConfirmModal(best.name, best.distance);
+            return; 
+          }
+        }
+      } catch (e) {}
+      this.scanInterval = setTimeout(scanFrame, 200); 
+    };
+    scanFrame();
+  },
+
+  async showConfirmModal(name, distance) {
+    document.getElementById('scan-line').style.display = 'none';
+    document.getElementById('scan-video').pause();
+    this.matchedName = name;
+    document.getElementById('modal-user-name').innerText = name;
+    document.getElementById('scan-modal').style.display = 'flex';
+
+    const btnGrid = document.getElementById('modal-action-grid');
+    btnGrid.innerHTML = `<button class="btn btn-outline" disabled style="padding: 16px; border:none;"><svg class="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24" style="color:var(--primary)"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ตรวจสอบสถานะ...</button>`;
+
+    // หาเวลาวันนี้แบบ Text DD/MM/YYYY ตามฟอร์แมตเดิม
+    const bkkDate = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Bangkok"}));
+    const todayStr = `${String(bkkDate.getDate()).padStart(2, '0')}/${String(bkkDate.getMonth() + 1).padStart(2, '0')}/${bkkDate.getFullYear()}`;
+
+    // เช็คจาก Supabase
+    const { data: logs } = await this.supabase.from('attendance').select('type, log_time').eq('name', name).eq('log_date', todayStr);
+    
+    let hasIn = false; let hasOut = false;
+    if (logs) {
+        logs.forEach(l => {
+            if(l.type === 'เข้างาน') hasIn = true;
+            if(l.type === 'เลิกงาน') hasOut = true;
+        });
+    }
+
+    if (!hasIn) {
+      btnGrid.innerHTML = `<button class="btn btn-success" onclick="app.submitAttendance('เข้างาน')"><i data-lucide="log-in"></i> บันทึกเข้างาน</button>`;
+    } else if (hasIn && !hasOut) {
+      btnGrid.innerHTML = `<button class="btn btn-danger" onclick="app.submitAttendance('เลิกงาน')"><i data-lucide="log-out"></i> บันทึกเลิกงาน</button>`;
+    } else {
+      btnGrid.innerHTML = `<button class="btn btn-outline" disabled style="color:var(--success); border-color:var(--success);"><i data-lucide="check-check"></i> บันทึกเวลาครบแล้ว</button>`;
+    }
+    lucide.createIcons({ root: btnGrid });
+  },
+
+  closeModal() {
+    document.getElementById('scan-modal').style.display = 'none';
+    this.matchedName = null;
+    document.getElementById('scan-video').play().catch(e=>{});
+    this.setHtmlAndIcons('scan-badge', '<i data-lucide="scan" style="width: 16px; height: 16px;"></i> เตรียมกล้อง...');
+    document.getElementById('btn-start-scan').style.display = 'flex';
+  },
+
+  async submitAttendance(typeStr) {
+    const btn = document.getElementById('modal-action-grid').querySelector('button');
+    if(btn) { btn.disabled = true; btn.innerHTML = 'กำลังบันทึก...'; }
+
+    // ดึงเวลาปัจจุบัน BKK
+    const d = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Bangkok"}));
+    const log_date = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    const log_time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+    const mapLink = (this.currentLat && this.currentLat !== '-') ? `https://www.google.com/maps?q=${this.currentLat},${this.currentLng}` : '';
+
+    try {
+      const { error } = await this.supabase.from('attendance').insert([{
+          name: this.matchedName,
+          type: typeStr,
+          log_date: log_date,
+          log_time: log_time,
+          lat: this.currentLat ? String(this.currentLat) : '',
+          lng: this.currentLng ? String(this.currentLng) : '',
+          map_link: mapLink
+      }]);
+      if (error) throw error;
+
+      Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', text: `บันทึก ${typeStr} เรียบร้อย`, timer: 2500, showConfirmButton: false });
+      document.getElementById('scan-modal').style.display = 'none';
+      this.navigate('view-home');
+    } catch(e) {
+      Swal.fire('บันทึกล้มเหลว', e.message, 'error');
+      this.closeModal(); 
+    }
+  },
+
+  // ---------------------------------------------------------
+  // REPORTS
+  // ---------------------------------------------------------
+  switchReportTab(tab) {
+    const tabs = ['daily', 'detail', 'employee'];
+    tabs.forEach(t => {
+      const btn = document.getElementById('tab-btn-' + t);
+      const content = document.getElementById('tab-' + t);
+      if(t === tab) {
+          btn.className = 'btn btn-primary'; btn.style.width='auto'; btn.style.padding='8px 16px'; btn.style.borderRadius='20px'; btn.style.fontSize='0.9em';
+          content.style.display = 'block';
+      } else {
+          btn.className = 'btn btn-outline'; btn.style.width='auto'; btn.style.padding='8px 16px'; btn.style.borderRadius='20px'; btn.style.fontSize='0.9em';
+          content.style.display = 'none';
+      }
+    });
+
+    const role = localStorage.getItem('adminRole');
+    document.querySelectorAll('.super-only').forEach(el => el.style.display = (role === 'superadmin') ? 'table-cell' : 'none');
+
+    // Auto set date to today if empty
+    if(!document.getElementById('report-date').value) {
+        const d = new Date(); document.getElementById('report-date').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    this.loadReportData();
+  },
+
+  async loadReportData() {
+    document.getElementById('report-status').style.display = 'block';
+    
+    // ดึงวันที่จาก Date picker แปลงเป็น DD/MM/YYYY
+    const dateVal = document.getElementById('report-date').value;
+    if(!dateVal) return;
+    const dArr = dateVal.split('-');
+    const searchDateStr = `${dArr[2]}/${dArr[1]}/${dArr[0]}`; // DD/MM/YYYY
+
+    const role = localStorage.getItem('adminRole');
+
+    try {
+        // 1. Load Daily Tab
+        if(document.getElementById('tab-daily').style.display === 'block') {
+            const tbody = document.getElementById('daily-tbody'); tbody.innerHTML = '';
+            const { data: logs } = await this.supabase.from('attendance').select('*').eq('log_date', searchDateStr);
+            
+            if(!logs || logs.length === 0) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">ไม่มีข้อมูล</td></tr>'; }
+            else {
+                let sum = {};
+                logs.forEach(l => {
+                    if(!sum[l.name]) sum[l.name] = {in:'-', out:'-'};
+                    if(l.type === 'เข้างาน') sum[l.name].in = l.log_time;
+                    if(l.type === 'เลิกงาน') sum[l.name].out = l.log_time;
+                });
+                Object.keys(sum).forEach(name => {
+                    tbody.innerHTML += `<tr><td>${name}</td><td class="type-in">${this.formatThaiTime(sum[name].in)}</td><td class="type-out">${this.formatThaiTime(sum[name].out)}</td></tr>`;
+                });
+            }
+        }
+        
+        // 2. Load Detail Tab
+        if(document.getElementById('tab-detail').style.display === 'block') {
+            const tbody = document.getElementById('detail-tbody'); tbody.innerHTML = '';
+            const { data: logs } = await this.supabase.from('attendance').select('*').eq('log_date', searchDateStr).order('log_time', {ascending:false});
+            
+            if(!logs || logs.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">ไม่มีข้อมูล</td></tr>'; }
+            else {
+                logs.forEach(l => {
+                    let action = role==='superadmin' ? `<td><button onclick="app.deleteLog(${l.id})" style="color:red; background:none; border:none;"><i data-lucide="trash-2" style="width:16px;"></i></button></td>` : '';
+                    tbody.innerHTML += `<tr><td>${l.log_date}</td><td>${this.formatThaiTime(l.log_time)}</td><td>${l.name}</td><td class="${l.type==='เข้างาน'?'type-in':'type-out'}">${l.type}</td>${action}</tr>`;
+                });
+                lucide.createIcons({ root: tbody });
+            }
+        }
+
+        // 3. Load Employee Tab
+        if(document.getElementById('tab-employee').style.display === 'block') {
+            const tbody = document.getElementById('employee-tbody'); tbody.innerHTML = '';
+            const { data: users } = await this.supabase.from('users').select('id, name, photo');
+            
+            if(!users || users.length === 0) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">ไม่มีข้อมูลพนักงาน</td></tr>'; }
+            else {
+                users.forEach(u => {
+                    let img = u.photo ? `<img src="${u.photo}" style="width:40px; height:40px; border-radius:10px; object-fit:cover;">` : `<div style="width:40px; height:40px; background:#e2e8f0; border-radius:10px;"></div>`;
+                    let action = role==='superadmin' ? `<td><button onclick="app.deleteUser(${u.id}, '${u.name}')" style="color:red; background:none; border:none;"><i data-lucide="trash-2" style="width:16px;"></i></button></td>` : '';
+                    tbody.innerHTML += `<tr><td>${img}</td><td>${u.name}</td>${action}</tr>`;
+                });
+                lucide.createIcons({ root: tbody });
+            }
+        }
+
+    } catch(e) { console.error(e); }
+    document.getElementById('report-status').style.display = 'none';
+  },
+
+  async deleteLog(id) {
+    if(confirm('ลบข้อมูลการลงเวลานี้?')) {
+        await this.supabase.from('attendance').delete().eq('id', id);
+        this.loadReportData();
+    }
+  },
+  async deleteUser(id, name) {
+    if(confirm(`ลบข้อมูลใบหน้าของ ${name}?`)) {
+        await this.supabase.from('users').delete().eq('id', id);
+        this.loadReportData();
+    }
+  },
+
+  haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371000; 
+    const dLat = (lat2-lat1)*Math.PI/180; 
+    const dLon = (lon2-lon1)*Math.PI/180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+};
+
+window.onload = () => app.init();
+</script>
+</body>
+</html>

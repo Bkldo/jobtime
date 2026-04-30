@@ -2,445 +2,984 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#4f46e5">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>ระบบบันทึกเวลาเข้างาน</title>
-  
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- เพิ่ม Library SweetAlert2 สำหรับแจ้งเตือนแบบสวยงาม -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- นำเข้า Supabase JS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <style>
+    /* ==========================================================================
+       CSS VARIABLES & GLOBAL RESET (LIGHT THEME) - (ORIGINAL 100%)
+       ========================================================================== */
     :root {
-      --bg-main: #f0f4f8;
-      --bg-card: #ffffff;
-      --bg-card-hover: #f8fafc;
-      --border-color: #e2e8f0;
+      --bg-main: #f8fafc;
+      --bg-card: rgba(255, 255, 255, 0.85);
+      --bg-card-hover: rgba(255, 255, 255, 1);
+      --border-color: rgba(203, 213, 225, 0.8);
       --text-main: #0f172a;
       --text-muted: #64748b;
       --primary: #4f46e5;
       --primary-hover: #4338ca;
       --success: #10b981;
+      --success-hover: #059669;
       --danger: #ef4444;
+      --danger-hover: #dc2626;
       --warning: #f59e0b;
-      --app-padding: 16px;
     }
 
-    * { 
-      box-sizing: border-box; margin: 0; padding: 0;
-      -webkit-user-select: none; user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    input, textarea, select { -webkit-user-select: auto; user-select: auto; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: 'Sarabun', sans-serif;
       background-color: var(--bg-main);
+      background-image: 
+        radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.08), transparent 40%),
+        radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.05), transparent 40%);
+      background-attachment: fixed;
       color: var(--text-main);
       min-height: 100vh;
-      min-height: -webkit-fill-available;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       overflow-x: hidden;
-    }
-
-    .app-header {
-      background: linear-gradient(135deg, #1e3a8a, #4f46e5);
-      color: white;
-      padding: calc(env(safe-area-inset-top) + 20px) 20px 30px;
-      border-bottom-left-radius: 30px;
-      border-bottom-right-radius: 30px;
-      text-align: center;
-      position: relative;
-      box-shadow: 0 10px 25px rgba(79, 70, 229, 0.2);
-      margin-bottom: 20px;
+      padding: 0 16px;
     }
 
     .app-container {
-      width: 100%; max-width: 500px;
-      margin: 0 auto; padding: 0 var(--app-padding) 80px;
+      width: 100%;
+      max-width: 500px;
+      padding: 30px 0 60px;
+      position: relative;
+      z-index: 1;
     }
 
-    .view { display: none; opacity: 0; transition: opacity 0.3s ease; }
-    .view.active { display: block; opacity: 1; animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+    /* ==========================================================================
+       RESPONSIVE DESKTOP LAYOUT (ORIGINAL 100%)
+       ========================================================================== */
+    .center-widget { width: 100%; }
+    .report-widget { width: 100%; }
+    .config-grid   { display: block; }
+    .tabs-wrapper  { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .tabs-row      { display: flex; gap: 8px; }
+    .split-desktop { display: block; }
+    .side-panel    { display: flex; flex-direction: column; gap: 16px; }
 
-    @keyframes slideIn {
-      from { transform: translateY(20px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
+    @media (min-width: 768px) {
+      .app-container { max-width: 1200px; padding: 50px 32px 100px; }
+      .header { margin-bottom: 48px !important; }
+      .header-icon-svg { width: 84px !important; height: 84px !important; margin-bottom: 16px !important; }
+      .title { font-size: 2.6em !important; letter-spacing: -0.5px; }
+      .subtitle { font-size: 1.15em !important; }
+      
+      .menu-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 32px !important;
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      .menu-card { padding: 32px !important; border-radius: 24px !important; }
+      .menu-icon { width: 64px !important; height: 64px !important; font-size: 32px !important; }
+      .menu-title { font-size: 1.4em !important; }
+      .menu-desc { font-size: 1em !important; }
+      
+      .split-desktop {
+        display: grid;
+        grid-template-columns: 1fr 1.2fr;
+        gap: 40px;
+        align-items: stretch;
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+      .side-panel { justify-content: center; height: 100%; }
+      .side-panel .card-panel { flex: 1; display: flex; flex-direction: column; justify-content: center; margin-bottom: 0 !important; }
+      .split-desktop .video-container {
+        margin-bottom: 0 !important; min-height: 450px; height: 100%;
+        display: flex; align-items: center; justify-content: center;
+      }
+      
+      .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: stretch; }
+      .config-grid .card-panel { margin-bottom: 0; }
+      
+      .tabs-wrapper { flex-direction: row; }
+      .tabs-row { flex: 1; }
+      
+      .calendar-wrapper { max-width: 800px; margin: 0 auto; padding: 32px !important; }
+      .cal-day { font-size: 1.3em !important; }
+      
+      .table-container { box-shadow: 0 4px 20px rgba(0,0,0,0.03) !important; border-radius: 16px !important; }
+      th, td { padding: 20px 24px !important; font-size: 1.05em !important; }
     }
 
-    .card {
-      background: var(--bg-card); border-radius: 20px;
-      padding: 20px; margin-bottom: 16px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    /* ==========================================================================
+       VIEW MANAGEMENT (SPA)
+       ========================================================================== */
+    .view {
+      display: none;
+      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .view.active { display: block; }
+
+    /* ==========================================================================
+       COMPONENTS (ORIGINAL 100%)
+       ========================================================================== */
+    .header { text-align: center; margin-bottom: 32px; position: relative; }
+    
+    .header-icon-svg {
+      width: 60px; height: 60px; 
+      margin-bottom: 12px; display: inline-block;
+      filter: drop-shadow(0 8px 16px rgba(79, 70, 229, 0.25));
     }
 
-    .menu-item {
-      display: flex; align-items: center; gap: 16px;
-      padding: 16px; background: white; border-radius: 16px;
-      margin-bottom: 12px; cursor: pointer;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-      transition: transform 0.1s;
+    .title {
+      font-size: 1.9em; font-weight: 700; color: #1e3a8a;
+      background: linear-gradient(135deg, #1e40af, #4f46e5);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
     }
-    .menu-item:active { transform: scale(0.98); background: #f8fafc; }
-    .menu-icon-wrapper {
-      width: 48px; height: 48px; border-radius: 14px;
-      display: flex; align-items: center; justify-content: center; color: white;
-    }
+    .subtitle { color: var(--text-muted); font-size: 0.95em; font-weight: 500; }
 
+    .top-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .btn-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      color: var(--text-muted); padding: 8px 16px; border-radius: 20px;
+      font-size: 0.95em; font-weight: 500; text-decoration: none; cursor: pointer;
+      transition: all 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    }
+    .btn-back:hover { background: var(--bg-card-hover); color: var(--text-main); }
+    .nav-title { font-weight: 600; font-size: 1.15em; color: #334155; }
+
+    .admin-trigger {
+      position: absolute; top: 0; right: 0;
+      background: transparent; border: none; color: #94a3b8;
+      cursor: pointer; opacity: 0.6; transition: all 0.3s;
+      padding: 8px; border-radius: 50%;
+    }
+    .admin-trigger:hover { opacity: 1; color: var(--primary); background: rgba(79,70,229,0.1); }
+
+    /* Buttons */
     .btn {
-      width: 100%; border: none; border-radius: 14px; padding: 14px;
+      width: 100%; border: none; border-radius: 16px; padding: 16px;
       font-family: inherit; font-size: 16px; font-weight: 600;
       cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
-      color: white; transition: 0.2s;
+      transition: all 0.3s; color: white;
     }
-    .btn:active:not(:disabled) { transform: scale(0.97); }
-    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .btn-primary { background: var(--primary); box-shadow: 0 4px 12px rgba(79,70,229,0.25); }
-    .btn-success { background: var(--success); box-shadow: 0 4px 12px rgba(16,185,129,0.25); }
-    .btn-danger  { background: var(--danger); box-shadow: 0 4px 12px rgba(239,68,68,0.25); }
-    .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-main); box-shadow: none; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+    .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-hover)); box-shadow: 0 4px 12px rgba(79,70,229,0.25); }
+    .btn-success { background: linear-gradient(135deg, var(--success), var(--success-hover)); box-shadow: 0 4px 12px rgba(16,185,129,0.25); }
+    .btn-danger  { background: linear-gradient(135deg, var(--danger), var(--danger-hover)); box-shadow: 0 4px 12px rgba(239,68,68,0.25); }
+    .btn-outline { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+    .btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.05); box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
+    .btn-sm { padding: 6px 12px; font-size: 0.85em; border-radius: 8px; width: auto; }
 
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; font-size: 0.9em; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
+    /* Main Menu Cards */
+    .menu-grid { display: flex; flex-direction: column; gap: 16px; }
+    .menu-card {
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: 20px; padding: 24px; display: flex; align-items: center; gap: 20px;
+      cursor: pointer; transition: all 0.3s; backdrop-filter: blur(12px);
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+    }
+    .menu-card:hover { 
+      background: var(--bg-card-hover); transform: translateY(-4px); 
+      border-color: rgba(99,102,241,0.4); box-shadow: 0 12px 24px -4px rgba(79,70,229,0.15); 
+    }
+    .menu-icon { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
+    .icon-scan { background: rgba(16,185,129,0.15); color: #059669; }
+    .icon-reg { background: rgba(99,102,241,0.15); color: #4338ca; }
+    .icon-report { background: rgba(245,158,11,0.15); color: #d97706; }
+    .icon-config { background: rgba(100,116,139,0.15); color: #475569; }
+    .menu-info { flex: 1; }
+    .menu-title { font-size: 1.25em; font-weight: 700; margin-bottom: 4px; color: #1e293b; }
+    .menu-desc { font-size: 0.9em; color: var(--text-muted); }
+
+    /* Forms & Inputs */
+    .form-group { margin-bottom: 16px; text-align: left; }
+    .form-group label { display: block; font-size: 0.9em; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; }
     .form-control {
-      width: 100%; padding: 14px; border: 1px solid var(--border-color);
-      border-radius: 12px; font-family: inherit; font-size: 16px; background: #f8fafc;
-      outline: none; transition: 0.2s;
+      width: 100%; padding: 14px 16px; background: #ffffff;
+      border: 1px solid #cbd5e1; border-radius: 12px;
+      color: var(--text-main); font-family: inherit; font-size: 15px; outline: none; transition: 0.3s;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
     }
-    .form-control:focus { border-color: var(--primary); background: #ffffff; }
+    .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+    .card-panel { 
+      background: var(--bg-card); border: 1px solid var(--border-color); 
+      border-radius: 20px; padding: 24px; margin-bottom: 24px; backdrop-filter: blur(12px);
+      box-shadow: 0 4px 12px -2px rgba(0,0,0,0.03);
+    }
 
+    /* Video Scanner */
     .video-container {
-      position: relative; width: 100%; border-radius: 20px; overflow: hidden;
-      background: #000; min-height: 350px; margin-bottom: 20px;
+      position: relative; width: 100%; border-radius: 24px; overflow: hidden;
+      background: #e2e8f0; min-height: 300px; border: 4px solid #ffffff; margin-bottom: 20px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.08);
     }
-    video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; position: absolute; top:0; left:0;}
+    video { width: 100%; height: auto; display: block; transform: scaleX(-1); object-fit: cover; }
+    .scan-overlay {
+      position: absolute; inset: 0; pointer-events: none; z-index: 5;
+      background: radial-gradient(circle at center, transparent 40%, rgba(255,255,255,0.4) 100%);
+    }
     .scan-line {
-      position: absolute; left: 0; right: 0; height: 4px; background: var(--success);
-      box-shadow: 0 0 15px var(--success); animation: scanAnim 2.5s linear infinite; display: none; z-index: 10;
+      position: absolute; left: 10%; right: 10%; height: 3px;
+      background: var(--success); box-shadow: 0 0 12px var(--success);
+      animation: scanAnim 2s linear infinite; display: none; border-radius: 2px;
     }
     .status-badge {
       position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
-      background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 8px 16px;
-      border-radius: 20px; font-size: 0.85em; color: white; z-index: 10;
-      display: flex; align-items: center; gap: 6px; white-space: nowrap; border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.95); backdrop-filter: blur(4px); padding: 8px 18px;
+      border-radius: 20px; font-size: 0.9em; border: 1px solid var(--border-color); z-index: 10;
+      color: var(--text-main); font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      display: flex; align-items: center; gap: 6px; white-space: nowrap;
     }
 
-    .nav-bar {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 16px; background: white; position: sticky; top: 0; z-index: 50;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05); padding-top: env(safe-area-inset-top);
-    }
-
+    /* Modals (ORIGINAL 100% - Centered) */
     .modal-backdrop {
-      position: fixed; inset: 0; background: rgba(0,0,0, 0.6); backdrop-filter: blur(4px);
-      display: none; align-items: flex-end; justify-content: center; z-index: 100;
+      position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(6px);
+      display: none; align-items: center; justify-content: center; z-index: 100;
     }
     .modal {
-      background: #ffffff; border-radius: 24px 24px 0 0; width: 100%; max-width: 500px;
-      padding: 30px 24px calc(env(safe-area-inset-bottom) + 20px); text-align: center;
-      animation: slideUpModal 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      background: #ffffff; border: 1px solid var(--border-color); border-radius: 24px;
+      width: 90%; max-width: 400px; padding: 32px 24px; text-align: center;
+      animation: slideUp 0.3s ease; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
     }
-    @keyframes slideUpModal { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-icon { width: 72px; height: 72px; color: var(--primary); margin: 0 auto 16px; background: rgba(79,70,229,0.1); padding: 14px; border-radius: 50%; }
+    .modal-name { font-size: 1.6em; font-weight: 700; color: #1e3a8a; margin-bottom: 24px; }
+    .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+
+    /* Tables */
+    .table-container { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border-color); background: #ffffff; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95em; }
+    th, td { padding: 16px 20px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+    th { background: #f8fafc; color: var(--text-muted); font-weight: 700; border-bottom: 2px solid #e2e8f0; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+    .type-in { color: var(--success); font-weight: 600; }
+    .type-out { color: var(--warning); font-weight: 600; }
+    .action-cell { display: flex; gap: 8px; }
+
+    /* Calendar Styles */
+    .calendar-wrapper { background: #ffffff; border-radius: 16px; padding: 24px 16px; border: 1px solid var(--border-color); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); }
+    .calendar-header { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; font-weight: 700; color: var(--text-muted); margin-bottom: 12px; font-size: 0.95em; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+    .cal-day { 
+      aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; 
+      border-radius: 12px; background: #f8fafc; border: 1px solid var(--border-color); 
+      font-size: 1.1em; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); position: relative;
+      cursor: pointer; font-weight: 600; color: var(--text-main);
+    }
+    .cal-day:not(.empty):hover { transform: scale(1.1); z-index: 2; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: #cbd5e1; }
+    .cal-day.empty { background: transparent; border: none; cursor: default; }
+    .cal-day.in-out { background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.5); color: #059669; }
+    .cal-day.in-only { background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.5); color: #d97706; }
+    .cal-day.absent { color: #94a3b8; font-weight: 400; }
+    .cal-day.selected-day { border: 2px solid var(--primary); transform: scale(1.1); z-index: 3; box-shadow: 0 4px 15px rgba(79,70,229,0.25); background: #ffffff; color: var(--primary); }
+
+    .cal-legend { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; margin-top: 24px; font-size: 0.9em; }
+    .legend-item { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-weight: 500; }
+    .legend-dot { width: 14px; height: 14px; border-radius: 4px; }
+    .dot-green { background: rgba(16, 185, 129, 0.25); border: 1px solid #10b981; }
+    .dot-orange { background: rgba(245, 158, 11, 0.25); border: 1px solid #f59e0b; }
+    .dot-gray { background: #f8fafc; border: 1px solid var(--border-color); }
+
+    /* Alerts & Loading */
+    .alert { padding: 16px 20px; border-radius: 12px; margin-bottom: 24px; font-size: 0.95em; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+    .alert-warning { background: #fef3c7; border: 1px solid #fde68a; color: #b45309; }
     
-    @keyframes scanAnim { 0% { top: 5%; } 50% { top: 95%; } 100% { top: 5%; } }
+    .loader {
+      display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.4);
+      border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite;
+    }
+    .loader-dark { border-color: rgba(0,0,0,0.1); border-top-color: var(--primary); }
+
+    /* Grid สำหรับหน้าประวัติการทำงานย้อนหลัง */
+    .history-grid { display: grid; grid-template-columns: 1fr; gap: 16px; width: 100%; }
+    @media (min-width: 768px) { .history-grid { grid-template-columns: repeat(2, 1fr); gap: 24px; } }
+
+    /* ปุ่ม Pagination สำหรับการแบ่งหน้า */
+    .pagination-btn {
+      padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: #ffffff;
+      color: var(--text-muted); cursor: pointer; transition: all 0.2s; font-family: inherit;
+      font-weight: 600; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9em;
+    }
+    .pagination-btn:hover:not(:disabled) { background: var(--bg-main); border-color: var(--primary); color: var(--primary); }
+    .pagination-btn.active { background: var(--primary); color: #ffffff; border-color: var(--primary); box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3); }
+    .pagination-btn:disabled { opacity: 0.5; cursor: not-allowed; background: #f8fafc; }
+
+    /* ไฮไลท์คำค้นหา (Search Highlight) */
+    .highlight-search { background-color: #fef08a; color: #b45309; padding: 0 2px; border-radius: 4px; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+
+    /* SweetAlert2 Custom Style ให้เข้ากับธีม */
+    .swal2-popup { font-family: 'Sarabun', sans-serif !important; border-radius: 24px !important; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25) !important; }
+    .swal2-title { color: #1e3a8a !important; font-weight: 700 !important; }
+
+    /* ==========================================================================
+       PRINT STYLES (สำหรับปริ้น/ส่งออก PDF)
+       ========================================================================== */
+    @media print {
+      @page { size: A4 portrait; margin: 15mm; }
+      *, *::before, *::after { box-sizing: border-box !important; }
+      body { background: #ffffff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0 !important; padding: 0 !important; width: 100% !important; }
+      .app-container { padding: 0 !important; max-width: 100% !important; width: 100% !important; margin: 0 !important; }
+      .header, .top-nav, button, .admin-trigger, #history-list-view, .print-hide, .superadmin-only { display: none !important; }
+      .card-panel { box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; background: transparent !important; width: 100% !important; max-width: 100% !important; }
+      .title, .subtitle, * { color: #000 !important; }
+      svg { stroke: #000 !important; }
+      #history-detail-text, #cal-day-detail > div { border: 1px solid #ccc !important; background: #f9f9f9 !important; padding: 16px !important; color: #000 !important; width: 100% !important; word-wrap: break-word !important; }
+      .table-container { border: none !important; box-shadow: none !important; overflow: visible !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+      table { border-collapse: collapse !important; width: 100% !important; max-width: 100% !important; border: 1px solid #ccc !important; table-layout: auto !important; }
+      th, td { border: 1px solid #ccc !important; padding: 12px !important; color: #000 !important; white-space: normal !important; word-wrap: break-word !important; }
+      th { background-color: #f0f0f0 !important; }
+      #view-work-history { display: block !important; width: 100% !important; }
+      #history-detail-view { display: block !important; width: 100% !important; }
+    }
+
+    /* Image Modal (สำหรับดูรูปพนักงาน) */
+    .image-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); z-index: 200; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; }
+    .image-modal-overlay.active { display: flex; opacity: 1; }
+    .image-modal-content { position: relative; width: auto; max-width: 90vw; max-height: 90vh; animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .image-modal-content img { width: 100%; max-width: 260px; height: auto; max-height: 85vh; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); border: 4px solid #fff; object-fit: contain; display: block; }
+    .image-modal-close { position: absolute; top: -16px; right: -16px; background: var(--danger); color: white; border: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: transform 0.2s; z-index: 201; }
+    .image-modal-close:hover { transform: scale(1.1); background: var(--danger-hover); }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes scanAnim { 0% { top: 10%; } 50% { top: 90%; } 100% { top: 10%; } }
     @keyframes spin { to { transform: rotate(360deg); } }
-
-    .table-container { overflow-x: auto; border-radius: 12px; background: white; border: 1px solid var(--border-color); }
-    table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
-    th, td { padding: 12px; border-bottom: 1px solid var(--border-color); text-align: left; }
-    th { background: #f8fafc; font-weight: 600; color: var(--text-muted); }
-
+    @keyframes zoomIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   </style>
 </head>
 <body>
 
-<div id="view-home" class="view">
-  <div class="app-header">
-    <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
-        <button onclick="app.showAdminLogin()" style="background: rgba(255,255,255,0.2); border: none; padding: 8px; border-radius: 50%; color: white;">
-            <i data-lucide="settings" style="width: 20px; height: 20px;"></i>
-        </button>
-    </div>
-    <div style="background: white; width: 70px; height: 70px; border-radius: 20px; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; color: var(--primary);">
-        <i data-lucide="scan-face" style="width: 40px; height: 40px;"></i>
-    </div>
-    <h1 style="font-size: 1.6em; font-weight: 700;">ระบบบันทึกเวลาทำงาน</h1>
-    <p style="opacity: 0.8; font-size: 0.9em; margin-top: 4px;">Face ID & GPS App</p>
-  </div>
+<div class="app-container">
 
-  <div class="app-container">
-    <div class="menu-item" onclick="app.navigate('view-scan')">
-      <div class="menu-icon-wrapper" style="background: linear-gradient(135deg, #10b981, #059669);">
-        <i data-lucide="camera" style="width: 24px; height: 24px;"></i>
-      </div>
-      <div style="flex: 1;">
-        <div style="font-weight: 700; font-size: 1.1em;">สแกนเข้า/เลิกงาน</div>
-        <div style="color: var(--text-muted); font-size: 0.85em;">ระบบตรวจจับใบหน้าอัตโนมัติ</div>
-      </div>
-      <i data-lucide="chevron-right" style="color: #cbd5e1;"></i>
-    </div>
-
-    <div class="menu-item" onclick="app.navigate('view-register')">
-      <div class="menu-icon-wrapper" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
-        <i data-lucide="user-plus" style="width: 24px; height: 24px;"></i>
-      </div>
-      <div style="flex: 1;">
-        <div style="font-weight: 700; font-size: 1.1em;">ลงทะเบียนใบหน้า</div>
-        <div style="color: var(--text-muted); font-size: 0.85em;">เพิ่มพนักงานใหม่เข้าระบบ</div>
-      </div>
-      <i data-lucide="chevron-right" style="color: #cbd5e1;"></i>
-    </div>
-  </div>
-</div>
-
-<div id="view-scan" class="view" style="background: black; min-height: 100vh;">
-  <div class="nav-bar" style="background: transparent; color: white;">
-    <button onclick="app.navigate('view-home')" style="background: rgba(255,255,255,0.2); border:none; color:white; padding: 8px 12px; border-radius: 12px; display: flex; align-items: center; gap: 6px;">
-      <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> กลับ
-    </button>
-  </div>
-
-  <div class="video-container" style="border-radius: 0; height: calc(100vh - 150px); margin-bottom: 0;">
-    <div class="status-badge" id="scan-badge">
-      <i data-lucide="camera" style="width: 16px; height: 16px;"></i> เตรียมกล้อง...
-    </div>
-    <div class="scan-line" id="scan-line"></div>
-    <video id="scan-video" autoplay muted playsinline></video>
-  </div>
-
-  <div style="padding: 20px; background: white; border-radius: 24px 24px 0 0; position: fixed; bottom: 0; width: 100%; text-align: center;">
-    <div id="scan-gps-status" style="font-size: 0.9em; color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
-        <i data-lucide="map-pin" style="width: 16px; height: 16px;"></i> ตรวจสอบตำแหน่ง...
-    </div>
-    <button id="btn-start-scan" class="btn btn-primary" onclick="app.startScanning()" disabled style="padding: 16px;">
-      <i data-lucide="scan" style="width: 20px; height: 20px;"></i> เริ่มสแกนใบหน้า
-    </button>
-  </div>
-</div>
-
-<div id="view-register" class="view">
-  <div class="nav-bar">
-    <button onclick="app.navigate('view-home')" style="background: none; border:none; display: flex; align-items: center; gap: 6px; font-weight: 600;">
-      <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> กลับ
-    </button>
-    <span style="font-weight: 700;">ลงทะเบียน</span>
-    <div style="width: 60px;"></div>
-  </div>
-
-  <div class="app-container" style="padding-top: 20px;">
-    <div class="video-container" style="min-height: 280px; border-radius: 20px;">
-      <div class="status-badge" id="reg-badge"><i data-lucide="camera" style="width: 16px; height: 16px;"></i> เตรียมกล้อง...</div>
-      <video id="reg-video" autoplay muted playsinline></video>
-    </div>
-
-    <div class="card">
-      <div class="form-group">
-        <label>ชื่อ-นามสกุล</label>
-        <input type="text" id="reg-name" class="form-control" placeholder="พิมพ์ชื่อพนักงานที่นี่">
-      </div>
-      <div style="text-align: center; margin-bottom: 16px; font-size: 0.85em; color: var(--warning);">
-        * ขยับหน้าช้าๆ ถ่าย 3 มุม (หน้าตรง/ซ้าย/ขวา)
-      </div>
-      <button id="btn-save-face" class="btn btn-primary" onclick="app.registerFace()" disabled>
-        <i data-lucide="save"></i> บันทึกใบหน้า <span id="reg-count" style="background: rgba(0,0,0,0.2); padding: 2px 8px; border-radius: 10px; margin-left: 6px;">0/3</span>
+  <!-- =========================================================
+       VIEW: HOME (MAIN MENU)
+       ========================================================= -->
+  <div id="view-home" class="view active">
+    <div class="header">
+      <svg viewBox="0 0 100 100" class="header-icon-svg">
+        <defs>
+          <linearGradient id="govGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#1e3a8a" />
+            <stop offset="100%" stop-color="#4f46e5" />
+          </linearGradient>
+        </defs>
+        <path d="M22 5 h56 v40 h17 v50 h-90 v-50 h17 z" fill="url(#govGradient)" />
+        <g fill="var(--bg-main)">
+          <rect x="28" y="12" width="8" height="6" rx="0.5" /> <rect x="40" y="12" width="8" height="6" rx="0.5" /> <rect x="52" y="12" width="8" height="6" rx="0.5" /> <rect x="64" y="12" width="8" height="6" rx="0.5" />
+          <rect x="28" y="21" width="8" height="6" rx="0.5" /> <rect x="40" y="21" width="8" height="6" rx="0.5" /> <rect x="52" y="21" width="8" height="6" rx="0.5" /> <rect x="64" y="21" width="8" height="6" rx="0.5" />
+          <rect x="28" y="30" width="8" height="6" rx="0.5" /> <rect x="40" y="30" width="8" height="6" rx="0.5" /> <rect x="52" y="30" width="8" height="6" rx="0.5" /> <rect x="64" y="30" width="8" height="6" rx="0.5" />
+          <rect x="28" y="39" width="8" height="6" rx="0.5" /> <rect x="40" y="39" width="8" height="6" rx="0.5" /> <rect x="52" y="39" width="8" height="6" rx="0.5" /> <rect x="64" y="39" width="8" height="6" rx="0.5" />
+          <rect x="10" y="52" width="8" height="6" rx="0.5" /> <rect x="20" y="52" width="8" height="6" rx="0.5" /> <rect x="30" y="52" width="8" height="6" rx="0.5" /> <rect x="40" y="52" width="8" height="6" rx="0.5" /> <rect x="52" y="52" width="8" height="6" rx="0.5" /> <rect x="62" y="52" width="8" height="6" rx="0.5" /> <rect x="72" y="52" width="8" height="6" rx="0.5" /> <rect x="82" y="52" width="8" height="6" rx="0.5" />
+          <rect x="10" y="62" width="8" height="6" rx="0.5" /> <rect x="20" y="62" width="8" height="6" rx="0.5" /> <rect x="30" y="62" width="8" height="6" rx="0.5" /> <rect x="40" y="62" width="8" height="6" rx="0.5" /> <rect x="52" y="62" width="8" height="6" rx="0.5" /> <rect x="62" y="62" width="8" height="6" rx="0.5" /> <rect x="72" y="62" width="8" height="6" rx="0.5" /> <rect x="82" y="62" width="8" height="6" rx="0.5" />
+          <rect x="10" y="72" width="8" height="6" rx="0.5" /> <rect x="20" y="72" width="8" height="6" rx="0.5" /> <rect x="30" y="72" width="8" height="6" rx="0.5" /> <rect x="40" y="72" width="8" height="6" rx="0.5" /> <rect x="52" y="72" width="8" height="6" rx="0.5" /> <rect x="62" y="72" width="8" height="6" rx="0.5" /> <rect x="72" y="72" width="8" height="6" rx="0.5" /> <rect x="82" y="72" width="8" height="6" rx="0.5" />
+          <rect x="36" y="84" width="28" height="12" rx="1" /> <rect x="12" y="84" width="8" height="12" rx="0.5" /> <rect x="24" y="84" width="8" height="12" rx="0.5" /> <rect x="68" y="84" width="8" height="12" rx="0.5" /> <rect x="80" y="84" width="8" height="12" rx="0.5" />
+        </g>
+      </svg>
+      <h1 class="title">บันทึกเวลาทำงาน</h1>
+      <p class="subtitle">ระบบจดจำใบหน้าและตำแหน่ง GPS</p>
+      <button class="admin-trigger" onclick="app.showAdminLogin()" title="ตั้งค่าสำหรับผู้ดูแลระบบ">
+        <i data-lucide="settings"></i>
       </button>
-      <div id="reg-msg" style="margin-top: 12px; text-align: center; font-size: 0.9em;"></div>
     </div>
-  </div>
-</div>
 
-<div id="view-admin-login" class="view">
-  <div class="nav-bar">
-    <button onclick="app.navigate('view-home')" style="background: none; border:none; display: flex; align-items: center; gap: 6px; font-weight: 600;">
-      <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> กลับ
-    </button>
-  </div>
-  <div class="app-container" style="padding-top: 40px;">
-    <div class="card" style="text-align: center; padding: 40px 20px;">
-      <i data-lucide="shield-check" style="width: 50px; height: 50px; color: var(--primary); margin: 0 auto 20px;"></i>
-      
-      <div class="form-group" style="margin-bottom: 12px;">
-        <label style="text-align: center;">ชื่อผู้ใช้งาน (Username)</label>
-        <input type="text" id="admin-user" class="form-control" placeholder="admin" style="text-align: center; font-size: 1.2em;">
+    <div class="menu-grid">
+      <div class="menu-card" onclick="app.navigate('view-scan')">
+        <div class="menu-icon icon-scan"><i data-lucide="scan-face" style="width: 32px; height: 32px;"></i></div>
+        <div class="menu-info">
+          <div class="menu-title">สแกนใบหน้า</div>
+          <div class="menu-desc">บันทึกเวลาเข้า / เลิกงาน</div>
+        </div>
+        <i data-lucide="chevron-right" style="color: #cbd5e1; width: 24px; height: 24px;"></i>
       </div>
-      
-      <div class="form-group" style="margin-bottom: 12px;">
-        <label style="text-align: center;">รหัสผ่าน (Password)</label>
-        <input type="password" id="admin-pin" class="form-control" placeholder="••••••••" style="text-align: center; letter-spacing: 3px; font-size: 1.2em;">
+
+      <div class="menu-card" onclick="app.navigate('view-register')">
+        <div class="menu-icon icon-reg"><i data-lucide="user-plus" style="width: 32px; height: 32px;"></i></div>
+        <div class="menu-info">
+          <div class="menu-title">ลงทะเบียนใหม่</div>
+          <div class="menu-desc">บันทึกข้อมูลใบหน้าลงระบบ</div>
+        </div>
+        <i data-lucide="chevron-right" style="color: #cbd5e1; width: 24px; height: 24px;"></i>
       </div>
-      
-      <button id="btn-verify-admin" class="btn btn-primary" onclick="app.verifyAdmin()">เข้าสู่ระบบ</button>
-      <div id="admin-login-msg" style="color: var(--danger); font-size: 0.9em; margin-top: 12px;"></div>
     </div>
   </div>
-</div>
 
-<div id="view-admin-dashboard" class="view">
-  <div class="nav-bar">
-    <span style="font-weight: 700; font-size: 1.1em;">แผงควบคุม <span id="dash-role-badge" style="font-size: 0.7em; background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 6px;">Admin</span></span>
-    <button onclick="app.adminLogout()" style="background: #f1f5f9; border:none; padding: 6px 12px; border-radius: 8px; font-size: 0.9em; color: var(--danger);">
-      ออกจากระบบ
-    </button>
-  </div>
-  <div class="app-container" style="padding-top: 20px;">
-    <div class="menu-item" onclick="app.navigate('view-report')">
-      <div class="menu-icon-wrapper" style="background: #3b82f6;"><i data-lucide="file-text"></i></div>
-      <div style="flex: 1;"><div style="font-weight: 700;">รายงานการทำงาน</div><div style="color: var(--text-muted); font-size: 0.85em;">ดูประวัติเข้า-เลิกงาน</div></div>
+  <!-- =========================================================
+       VIEW: SCAN (ATTENDANCE)
+       ========================================================= -->
+  <div id="view-scan" class="view">
+    <div class="top-nav">
+      <button class="btn-back" onclick="app.navigate('view-home')">
+        <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> กลับเมนูหลัก
+      </button>
+      <span class="nav-title">สแกนเข้างาน</span>
     </div>
-    <div class="menu-item" onclick="app.navigate('view-config')">
-      <div class="menu-icon-wrapper" style="background: #64748b;"><i data-lucide="settings"></i></div>
-      <div style="flex: 1;"><div style="font-weight: 700;">ตั้งค่าระบบ & สิทธิ์ผู้ใช้</div><div style="color: var(--text-muted); font-size: 0.85em;">จุดพิกัด, แอดมิน, Wi-Fi</div></div>
-    </div>
-  </div>
-</div>
 
-<div id="view-config" class="view">
-  <div class="nav-bar">
-    <button onclick="app.navigate('view-admin-dashboard')" style="background: none; border:none; display: flex; align-items: center; gap: 6px; font-weight: 600;">
-      <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> กลับ
-    </button>
-    <span style="font-weight: 700;">ตั้งค่าระบบ</span>
-    <div style="width: 60px;"></div>
+    <div class="split-desktop">
+      <div class="side-panel">
+        <div class="card-panel" style="text-align: center; padding: 24px;">
+          <div id="scan-sys-status" style="font-size: 1.05em; color: var(--text-muted); margin-bottom: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <i data-lucide="loader-2" class="loader-dark" style="border:none; animation: spin 1.5s linear infinite; width: 20px; height: 20px; color: var(--text-muted);"></i> รอเริ่มการทำงาน...
+          </div>
+          <div id="scan-gps-status" style="font-size: 0.95em; color: var(--primary); display: flex; align-items: center; justify-content: center; gap: 8px; text-align: left; line-height: 1.4;">
+            <i data-lucide="map-pin" style="width: 16px; height: 16px; flex-shrink: 0;"></i> กำลังตรวจสอบตำแหน่ง...
+          </div>
+        </div>
+        <button id="btn-start-scan" class="btn btn-primary" onclick="app.startScanning()" style="padding: 18px; font-size: 18px;">
+          <i data-lucide="scan" style="width: 24px; height: 24px;"></i> แตะเพื่อเริ่มสแกน
+        </button>
+      </div>
+
+      <div class="video-container">
+        <div class="status-badge" id="scan-badge">
+          <i data-lucide="camera" style="width: 18px; height: 18px;"></i> เตรียมใช้งานกล้อง...
+        </div>
+        <div class="scan-overlay"></div>
+        <div class="scan-line" id="scan-line"></div>
+        <video id="scan-video" autoplay muted playsinline></video>
+      </div>
+    </div>
   </div>
-  <div class="app-container" style="padding-top: 20px;">
+
+  <!-- =========================================================
+       VIEW: REGISTER
+       ========================================================= -->
+  <div id="view-register" class="view">
+    <div class="top-nav">
+      <button class="btn-back" onclick="app.navigate('view-home')">
+        <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> กลับเมนูหลัก
+      </button>
+      <span class="nav-title">ลงทะเบียนพนักงาน</span>
+    </div>
+
+    <div class="split-desktop">
+      <div class="side-panel">
+        <div class="card-panel">
+          <div class="form-group">
+            <label>ชื่อ-นามสกุล (Name - Surname)</label>
+            <input type="text" id="reg-name" class="form-control" placeholder="ระบุชื่อของคุณ">
+          </div>
+          <div style="text-align: center; margin-bottom: 20px; font-size: 0.9em; color: var(--text-muted);">
+            * ควรถ่าย 3 มุม: หน้าตรง / เอียงซ้าย / เอียงขวา
+          </div>
+          <button id="btn-save-face" class="btn btn-primary" onclick="app.registerFace()" disabled style="padding: 18px; font-size: 18px;">
+            <i data-lucide="save" style="width: 22px; height: 22px;"></i> บันทึกใบหน้า 
+            <span id="reg-count" style="background: rgba(255,255,255,0.25); padding: 2px 10px; border-radius: 12px; font-size: 0.85em; margin-left: 6px;">0/3</span>
+          </button>
+          <div id="reg-msg" style="margin-top: 20px; text-align: center; font-size: 0.95em; line-height: 1.6;"></div>
+        </div>
+      </div>
+
+      <div class="video-container" style="min-height: 250px;">
+        <div class="status-badge" id="reg-badge">
+          <i data-lucide="camera" style="width: 18px; height: 18px;"></i> เตรียมกล้อง...
+        </div>
+        <video id="reg-video" autoplay muted playsinline></video>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       VIEW: ADMIN LOGIN
+       ========================================================= -->
+  <div id="view-admin-login" class="view">
+    <div class="top-nav">
+      <button class="btn-back" onclick="app.navigate('view-home')">
+        <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> กลับ
+      </button>
+      <span class="nav-title">ผู้ดูแลระบบ</span>
+    </div>
     
-    <div class="card">
-      <div style="font-weight: 700; color: var(--success); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;"><i data-lucide="map"></i> พิกัด GPS</div>
-      <button class="btn btn-outline" style="margin-bottom: 16px; padding: 10px;" onclick="app.getAdminLocation()">ดึงพิกัดปัจจุบัน</button>
-      <div style="display: flex; gap: 10px;">
-        <div class="form-group" style="flex: 1;"><label>Lat</label><input type="number" id="cfg-lat" class="form-control" style="padding: 10px;"></div>
-        <div class="form-group" style="flex: 1;"><label>Lng</label><input type="number" id="cfg-lng" class="form-control" style="padding: 10px;"></div>
-      </div>
-      <div class="form-group">
-        <label>ระยะอนุญาต (เมตร) *ใส่ 0 เพื่อปิด</label>
-        <input type="number" id="cfg-rad" class="form-control">
+    <div class="center-widget" style="max-width: 500px; margin: 0 auto;">
+      <div class="card-panel" style="margin-top: 40px; padding: 40px 30px;">
+        <div style="text-align: center; margin-bottom: 24px; color: var(--primary);">
+          <i data-lucide="shield-check" style="width: 64px; height: 64px;"></i>
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="text-align: center;">ชื่อผู้ใช้งาน (Username)</label>
+          <input type="text" id="admin-user" class="form-control" placeholder="admin" style="text-align: center; font-size: 1.2em;">
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="text-align: center;">รหัสผ่าน (Password)</label>
+          <input type="password" id="admin-pin" class="form-control" placeholder="••••••••" style="text-align: center; font-size: 1.2em; letter-spacing: 2px;">
+        </div>
+        
+        <div style="text-align: center; font-size: 0.85em; color: var(--text-muted); margin-bottom: 24px;">
+
+        </div>
+        
+        <button id="btn-verify-admin" class="btn btn-primary" onclick="app.verifyAdmin()" style="padding: 16px; font-size: 1.1em;">
+          <i data-lucide="log-in" style="width: 20px; height: 20px;"></i> เข้าสู่ระบบ
+        </button>
+        <div id="admin-login-msg" style="color: var(--danger); text-align: center; margin-top: 16px; font-size: 0.95em; font-weight: 500;"></div>
       </div>
     </div>
+  </div>
 
-    <div class="card">
-      <div style="font-weight: 700; color: var(--warning); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;"><i data-lucide="wifi"></i> Wi-Fi ออฟฟิศ (ข้าม GPS)</div>
-      <div class="form-group">
-        <label>Public IP</label>
-        <div style="display: flex; gap: 8px;">
-          <input type="text" id="cfg-ip" class="form-control">
-          <button class="btn btn-outline" style="width: auto; padding: 0 16px;" onclick="app.getAdminIP()">ดึง IP</button>
+  <!-- =========================================================
+       VIEW: ADMIN DASHBOARD
+       ========================================================= -->
+  <div id="view-admin-dashboard" class="view">
+    <div class="top-nav">
+      <button class="btn-back" onclick="app.adminLogout()">
+        <i data-lucide="log-out" style="width: 18px; height: 18px;"></i> ออกจากระบบ
+      </button>
+      <span class="nav-title">แผงควบคุม Admin <span id="dash-role-badge" style="font-size: 0.7em; background: #e2e8f0; color: #475569; padding: 4px 8px; border-radius: 8px; margin-left: 8px; vertical-align: middle;"></span></span>
+    </div>
+
+    <div class="menu-grid">
+      <div class="menu-card" onclick="app.navigate('view-report')">
+        <div class="menu-icon icon-report"><i data-lucide="bar-chart-3" style="width: 32px; height: 32px;"></i></div>
+        <div class="menu-info">
+          <div class="menu-title">รายงานการทำงาน</div>
+          <div class="menu-desc">ดูประวัติเข้า-เลิกงานย้อนหลัง</div>
+        </div>
+        <i data-lucide="chevron-right" style="color: #cbd5e1; width: 24px; height: 24px;"></i>
+      </div>
+
+      <div class="menu-card" onclick="app.navigate('view-config')">
+        <div class="menu-icon icon-config"><i data-lucide="settings" style="width: 32px; height: 32px;"></i></div>
+        <div class="menu-info">
+          <div class="menu-title">ตั้งค่าระบบ & สิทธิ์</div>
+          <div class="menu-desc">จัดการจุดเช็คอิน และแอดมิน</div>
+        </div>
+        <i data-lucide="chevron-right" style="color: #cbd5e1; width: 24px; height: 24px;"></i>
+      </div>
+
+      <div class="menu-card" onclick="app.navigate('view-work-history')" style="grid-column: 1 / -1;">
+        <div class="menu-icon" style="background: rgba(16,185,129,0.15); color: #059669;"><i data-lucide="book-open" style="width: 32px; height: 32px;"></i></div>
+        <div class="menu-info">
+          <div class="menu-title">สมุดบันทึกงานย้อนหลัง</div>
+          <div class="menu-desc">ค้นหาและดูรายละเอียดงานประจำวันย้อนหลัง</div>
+        </div>
+        <i data-lucide="chevron-right" style="color: #cbd5e1; width: 24px; height: 24px;"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       VIEW: CONFIG (ADMIN)
+       ========================================================= -->
+  <div id="view-config" class="view" style="width: 100%;">
+    <div class="top-nav">
+      <button class="btn-back" onclick="app.navigate('view-admin-dashboard')">
+        <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> แผงควบคุม
+      </button>
+      <span class="nav-title">ตั้งค่าระบบ</span>
+    </div>
+
+    <div class="config-grid">
+
+      <div class="card-panel">
+        <div style="margin-bottom: 20px; font-weight: 700; font-size: 1.1em; color: var(--success); display: flex; align-items: center; gap: 10px;">
+          <i data-lucide="map" style="width: 20px; height: 20px;"></i> ตั้งค่าจุดเช็คอิน (GPS)
+        </div>
+        <button id="btn-get-admin-loc" class="btn btn-outline" style="margin-bottom: 20px; padding: 12px;" onclick="app.getAdminLocation()">
+          <i data-lucide="crosshair" style="width: 18px; height: 18px;"></i> ดึงพิกัดปัจจุบัน
+        </button>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="form-group">
+            <label>Latitude</label>
+            <input type="number" id="cfg-lat" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Longitude</label>
+            <input type="number" id="cfg-lng" class="form-control">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>รัศมีที่ยอมรับ (เมตร) *ใส่ 0 เพื่อปิดตรวจสอบ</label>
+          <input type="number" step="1" id="cfg-rad" class="form-control" placeholder="เช่น 10 (10 เมตร)">
         </div>
       </div>
-    </div>
 
-    <div class="card" style="grid-column: 1 / -1;">
-      <div style="font-weight: 700; color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">
-        <i data-lucide="file-text"></i> สิทธิ์รายงานผลปฏิบัติงาน (พนักงาน)
+      <div class="card-panel">
+        <div style="margin-bottom: 20px; font-weight: 700; font-size: 1.1em; color: var(--warning); display: flex; align-items: center; gap: 10px;">
+          <i data-lucide="wifi" style="width: 20px; height: 20px;"></i> ตั้งค่าเครือข่าย Wi-Fi ออฟฟิศ (แก้ปัญหาพิกัด GPS)
+        </div>
+        <div class="form-group">
+          <label>IP ของอินเทอร์เน็ตออฟฟิศ (Public IP)</label>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <input type="text" id="cfg-ip" class="form-control" placeholder="เช่น 118.174.x.x">
+            <button class="btn btn-outline" style="width: auto; padding: 14px 20px; flex-shrink: 0;" onclick="app.getAdminIP()">
+              <i data-lucide="download" style="width: 18px; height: 18px;"></i> ดึง IP
+            </button>
+          </div>
+          <div style="font-size: 0.85em; color: var(--text-muted); margin-top: 8px; line-height: 1.5;">
+            * เมื่อพนักงานใช้ Wi-Fi เดียวกัน ระบบจะอนุญาตให้เช็คอินทันที (ข้ามการเช็คระยะ GPS)
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <select id="cfg-emp-report-mode" class="form-control" onchange="app.toggleEmpReportInput()">
-          <option value="none">❌ ปิดใช้งานทุกคน (ไม่แสดงช่องรายงาน)</option>
-          <option value="all">✅ เปิดให้แสดงช่องรายงานทุกคน</option>
-          <option value="custom">👤 แสดงเฉพาะบุคคลที่กำหนด...</option>
-        </select>
-      </div>
-      <div class="form-group" id="cfg-emp-report-custom-wrap" style="display: none;">
-        <label>ระบุชื่อพนักงานที่ต้องการให้มีช่องรายงานผล (คั่นด้วยลูกน้ำ , )</label>
-        <input type="text" id="cfg-emp-report-names" class="form-control" placeholder="เช่น สมชาย ใจดี, สมหญิง รักงาน">
-      </div>
-    </div>
 
-    <div class="card superadmin-only" id="wrap-admin-manage" style="display: none;">
-        <div style="font-weight: 700; color: var(--danger); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;"><i data-lucide="shield"></i> บัญชีผู้ดูแลระบบ (Admins)</div>
-        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
-          <input type="text" id="new-admin-user" class="form-control" placeholder="Username" style="flex: 1; min-width: 100px; padding: 10px;">
-          <input type="text" id="new-admin-pass" class="form-control" placeholder="Password" style="flex: 1; min-width: 100px; padding: 10px;">
-          <select id="new-admin-role" class="form-control" style="width: auto; padding: 10px;">
-             <option value="admin">Admin</option>
-             <option value="superadmin">Super</option>
+      <div class="card-panel" style="grid-column: 1 / -1;">
+        <div style="margin-bottom: 20px; font-weight: 700; font-size: 1.1em; color: var(--primary); display: flex; align-items: center; gap: 10px;">
+          <i data-lucide="file-text" style="width: 20px; height: 20px;"></i> ตั้งค่าการรายงานผลการปฏิบัติงาน (พนักงาน)
+        </div>
+        <div class="form-group">
+          <label>สิทธิ์การรายงานผลตอนสแกนเลิกงาน</label>
+          <select id="cfg-emp-report-mode" class="form-control" onchange="app.toggleEmpReportInput()">
+            <option value="none">❌ ปิดใช้งานทุกคน (ไม่แสดงช่องรายงาน)</option>
+            <option value="all">✅ เปิดให้แสดงช่องรายงานทุกคน</option>
+            <option value="custom">👤 แสดงเฉพาะบุคคลที่กำหนด...</option>
           </select>
-          <button class="btn btn-success" style="width: auto; padding: 10px 16px; border-radius: 12px;" onclick="app.addAdmin()"><i data-lucide="plus" style="width: 18px; height: 18px;"></i></button>
         </div>
+        <div class="form-group" id="cfg-emp-report-custom-wrap" style="display: none;">
+          <label>ระบุชื่อพนักงานที่ต้องการให้มีช่องรายงานผล (คั่นด้วยลูกน้ำ , )</label>
+          <input type="text" id="cfg-emp-report-names" class="form-control" placeholder="เช่น สมชาย ใจดี, สมหญิง รักงาน">
+        </div>
+      </div>
+
+      <!-- ส่วนจัดการบัญชีผู้ดูแลระบบ (เฉพาะ Superadmin) -->
+      <div class="card-panel superadmin-only" id="wrap-admin-manage" style="display: none; grid-column: 1 / -1;">
+          <div style="font-weight: 700; color: var(--danger); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;"><i data-lucide="shield"></i> จัดการบัญชีผู้ดูแลระบบ (Admins)</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+            <input type="text" id="new-admin-user" class="form-control" placeholder="Username" style="flex: 1; min-width: 100px; padding: 10px;">
+            <input type="text" id="new-admin-pass" class="form-control" placeholder="Password" style="flex: 1; min-width: 100px; padding: 10px;">
+            <select id="new-admin-role" class="form-control" style="width: auto; padding: 10px;">
+               <option value="admin">Admin</option>
+               <option value="superadmin">Super</option>
+            </select>
+            <button class="btn btn-success" style="width: auto; padding: 10px 16px; border-radius: 12px;" onclick="app.addAdmin()"><i data-lucide="plus" style="width: 18px; height: 18px;"></i></button>
+          </div>
+          <div class="table-container">
+            <table id="admins-table">
+              <thead><tr><th>Username</th><th>ระดับสิทธิ์</th><th style="text-align: center;">ลบ</th></tr></thead>
+              <tbody id="admins-tbody"></tbody>
+            </table>
+          </div>
+      </div>
+
+    </div>
+
+    <div class="center-widget" style="margin-top: 32px; max-width: 600px; margin-left: auto; margin-right: auto;">
+      <button class="btn btn-primary" onclick="app.saveConfig()" id="btn-save-cfg" style="padding: 18px; font-size: 1.1em;">
+        <i data-lucide="save" style="width: 20px; height: 20px;"></i> บันทึกการตั้งค่าทั้งหมด
+      </button>
+      <div id="cfg-msg" style="text-align: center; margin-top: 20px; font-size: 1em; font-weight: 500;"></div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       VIEW: REPORT (ADMIN)
+       ========================================================= -->
+  <div id="view-report" class="view" style="width: 100%;">
+    <div class="top-nav">
+      <button class="btn-back" onclick="app.navigate('view-admin-dashboard')">
+        <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> แผงควบคุม
+      </button>
+      <span class="nav-title">รายงานการทำงาน</span>
+    </div>
+
+    <div class="card-panel report-widget" style="padding: 24px;">
+      
+      <!-- Filter เดือน/ปี -->
+      <div id="filter-monthly" style="display: flex; gap: 12px; margin-bottom: 24px; max-width: 700px; margin-left: auto; margin-right: auto;">
+        <select id="report-month" class="form-control" style="flex: 1; padding: 14px;">
+          <option value="1">มกราคม</option>
+          <option value="2">กุมภาพันธ์</option>
+          <option value="3">มีนาคม</option>
+          <option value="4">เมษายน</option>
+          <option value="5">พฤษภาคม</option>
+          <option value="6">มิถุนายน</option>
+          <option value="7">กรกฎาคม</option>
+          <option value="8">สิงหาคม</option>
+          <option value="9">กันยายน</option>
+          <option value="10">ตุลาคม</option>
+          <option value="11">พฤศจิกายน</option>
+          <option value="12">ธันวาคม</option>
+        </select>
+        <select id="report-year" class="form-control" style="flex: 1; padding: 14px;">
+          <option value="2026">2026</option>
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+        </select>
+        <button class="btn btn-primary" style="width: auto; padding: 12px 24px; border-radius: 14px;" onclick="app.handleMonthlySearch()">
+          <i data-lucide="search" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+
+      <!-- Filter รายวัน -->
+      <div id="filter-daily" style="display: none; gap: 12px; margin-bottom: 24px; max-width: 700px; margin-left: auto; margin-right: auto;">
+        <input type="date" id="report-date" class="form-control" style="flex: 1; padding: 14px;">
+        <button class="btn btn-primary" style="width: auto; padding: 12px 24px; border-radius: 14px;" onclick="app.loadDailyReport()">
+          <i data-lucide="search" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+
+      <!-- Tabs สลับมุมมอง -->
+      <div class="tabs-wrapper" style="max-width: 900px; margin: 0 auto 24px;">
+        <div class="tabs-row">
+          <button class="btn btn-outline" id="btn-tab-daily" onclick="app.switchReportTab('daily')" style="padding: 12px; font-size: 0.95em;">
+            <i data-lucide="calendar" style="width: 18px; height: 18px; margin-right: 6px;"></i> สรุปรายวัน
+          </button>
+          <button class="btn btn-outline" id="btn-tab-summary" onclick="app.switchReportTab('summary')" style="padding: 12px; font-size: 0.95em;">
+            <i data-lucide="pie-chart" style="width: 18px; height: 18px; margin-right: 6px;"></i> สรุปเดือน
+          </button>
+        </div>
+        <div class="tabs-row">
+          <button class="btn btn-outline" id="btn-tab-detail" onclick="app.switchReportTab('detail')" style="padding: 12px; font-size: 0.95em; background: var(--primary); border-color: var(--primary); color: white;">
+            <i data-lucide="list" style="width: 18px; height: 18px; margin-right: 6px;"></i> รายละเอียด
+          </button>
+          <button class="btn btn-outline" id="btn-tab-employee" onclick="app.switchReportTab('employee')" style="padding: 12px; font-size: 0.95em;">
+            <i data-lucide="users" style="width: 18px; height: 18px; margin-right: 6px;"></i> ข้อมูลพนักงาน
+          </button>
+        </div>
+      </div>
+
+      <div id="report-status" style="text-align: center; color: var(--text-muted); margin-bottom: 20px; padding: 30px 0; font-size: 1.1em;">
+        กำลังโหลดข้อมูล...
+      </div>
+      
+      <!-- ตารางรายละเอียด -->
+      <div class="table-container" id="table-detail-container">
+        <table id="report-table">
+          <thead>
+            <tr>
+              <th style="width: 60px; text-align: center;">ลำดับ</th>
+              <th>วันที่</th>
+              <th>เวลา</th>
+              <th>ชื่อพนักงาน</th>
+              <th>สถานะ</th>
+              <th class="superadmin-only print-hide" style="display: none; text-align: center;">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="report-tbody">
+            <!-- Data will be injected here -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ปฏิทินสรุปรายบุคคล -->
+      <div class="table-container" id="table-summary-container" style="display: none; background: transparent; border: none; overflow: visible; box-shadow: none;">
+        <div class="form-group" style="margin-bottom: 24px; max-width: 500px; margin-left: auto; margin-right: auto;">
+          <label style="color: var(--text-main); font-size: 1em; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="user" style="width: 20px; height: 20px;"></i> เลือกพนักงานเพื่อดูปฏิทิน
+          </label>
+          <select id="summary-user-select" class="form-control" style="padding: 16px; font-size: 1.05em;" onchange="app.renderCalendar()"></select>
+        </div>
+        <div class="calendar-wrapper" id="calendar-render-area">
+          <!-- Calendar injected here -->
+        </div>
+        
+        <!-- ส่วนแสดงรายละเอียดเวลาเมื่อคลิกวันที่ในปฏิทิน -->
+        <div id="cal-day-detail" style="margin-top: 24px; padding: 24px; background: #ffffff; border-radius: 16px; border: 1px solid var(--border-color); display: none; max-width: 600px; margin-left: auto; margin-right: auto; box-shadow: 0 8px 20px rgba(0,0,0,0.05);">
+          <!-- Detail will be injected here -->
+        </div>
+      </div>
+
+      <!-- ตารางสรุปรายวัน พร้อมบันทึกการทำงาน -->
+      <div id="table-daily-container" style="display: none;">
+        
+        <!-- ส่วนบันทึกรายละเอียดการทำงาน -->
+        <div class="card-panel" style="padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+          <div style="margin-bottom: 16px; font-weight: 700; font-size: 1.1em; color: var(--primary); display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="edit-3" style="width: 20px; height: 20px;"></i> บันทึกรายละเอียดการทำงานประจำวัน
+          </div>
+          <textarea id="daily-report-details" class="form-control" rows="4" placeholder="ระบุรายละเอียดงานที่ทำในวันนี้... ตัวอย่างเช่น: 1. ประชุมทีม 2. ตรวจสอบระบบ..." style="resize: vertical; min-height: 100px; line-height: 1.6;"></textarea>
+          <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+            <button class="btn btn-primary" style="width: auto; padding: 12px 24px; border-radius: 12px;" onclick="app.saveDailyReport()">
+              <i data-lucide="save" style="width: 18px; height: 18px;"></i> บันทึกรายละเอียด
+            </button>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 12px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; padding-left: 4px;">
+          <i data-lucide="users" style="width: 20px; height: 20px; color: var(--text-muted);"></i> รายชื่อผู้เข้างานในวันนี้
+        </div>
+
         <div class="table-container">
-          <table id="admins-table">
-            <thead><tr><th>Username</th><th>ระดับสิทธิ์</th><th style="text-align: center;">ลบ</th></tr></thead>
-            <tbody id="admins-tbody"></tbody>
+          <table id="daily-table">
+            <thead>
+              <tr>
+                <th style="width: 60px; text-align: center;">ลำดับ</th>
+                <th>ชื่อพนักงาน</th>
+                <th>เข้างาน</th>
+                <th>เลิกงาน</th>
+              </tr>
+            </thead>
+            <tbody id="daily-tbody">
+              <!-- Data will be injected here -->
+            </tbody>
           </table>
         </div>
-    </div>
+      </div>
 
-    <button class="btn btn-primary" onclick="app.saveConfig()" id="btn-save-cfg"><i data-lucide="save"></i> บันทึกการตั้งค่า</button>
+      <!-- ตารางข้อมูลพนักงาน -->
+      <div class="table-container" id="table-employee-container" style="display: none;">
+        <table id="employee-table">
+          <thead>
+            <tr>
+              <th style="width: 60px; text-align: center;">ลำดับ</th>
+              <th>รูปถ่าย</th>
+              <th>ชื่อพนักงาน</th>
+              <th style="text-align: center;">เข้างาน (วัน)</th>
+              <th style="text-align: center;">เลิกงาน (วัน)</th>
+              <th>วัน-เวลาที่ลงทะเบียน</th>
+              <th class="superadmin-only print-hide" style="display: none; text-align: center;">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="employee-tbody">
+            <!-- Data will be injected here -->
+          </tbody>
+        </table>
+      </div>
+
+    </div>
   </div>
-</div>
 
-<div id="view-report" class="view">
-  <div class="nav-bar">
-    <button onclick="app.navigate('view-admin-dashboard')" style="background: none; border:none; display: flex; align-items: center; gap: 6px; font-weight: 600;">
-      <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> กลับ
-    </button>
-    <span style="font-weight: 700;">รายงาน</span>
-    <div style="width: 60px;"></div>
+  <!-- =========================================================
+       VIEW: WORK HISTORY (ADMIN)
+       ========================================================= -->
+  <div id="view-work-history" class="view" style="width: 100%;">
+    <div class="top-nav">
+      <button class="btn-back" onclick="app.navigate('view-admin-dashboard')">
+        <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> แผงควบคุม
+      </button>
+      <span class="nav-title">สมุดบันทึกงานย้อนหลัง</span>
+    </div>
+
+    <!-- List View: แสดงรายการของแต่ละวัน (Full Width) -->
+    <div id="history-list-view" style="width: 100%;">
+      <!-- ปรับการ์ดค้นหาให้กว้างเต็มหน้าจอเสมอ -->
+      <div class="card-panel" style="padding: 24px; width: 100%; margin-bottom: 24px; display: block; box-sizing: border-box;">
+        <div style="margin-bottom: 16px; font-weight: 700; color: var(--primary); display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="search" style="width: 20px; height: 20px;"></i> ค้นหาประวัติการทำงานตามเดือน
+          </div>
+        </div>
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+          <select id="history-month" class="form-control" style="flex: 1; min-width: 120px; padding: 14px;">
+            <option value="1">มกราคม</option>
+            <option value="2">กุมภาพันธ์</option>
+            <option value="3">มีนาคม</option>
+            <option value="4">เมษายน</option>
+            <option value="5">พฤษภาคม</option>
+            <option value="6">มิถุนายน</option>
+            <option value="7">กรกฎาคม</option>
+            <option value="8">สิงหาคม</option>
+            <option value="9">กันยายน</option>
+            <option value="10">ตุลาคม</option>
+            <option value="11">พฤศจิกายน</option>
+            <option value="12">ธันวาคม</option>
+          </select>
+          <select id="history-year" class="form-control" style="flex: 1; min-width: 120px; padding: 14px;">
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+          </select>
+          <button class="btn btn-primary" style="width: auto; padding: 12px 24px; border-radius: 12px; flex-shrink: 0;" onclick="app.loadWorkHistory()">
+            <i data-lucide="download" style="width: 20px; height: 20px; margin-right: 6px;"></i> โหลดข้อมูล
+          </button>
+        </div>
+
+        <div style="position: relative;">
+          <i data-lucide="search" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 18px; height: 18px;"></i>
+          <input type="text" id="history-search-keyword" class="form-control" style="padding-left: 44px; width: 100%; box-sizing: border-box;" placeholder="ค้นหาข้อความรายละเอียดงาน หรือ ชื่อพนักงาน..." oninput="app.onSearchInput()">
+        </div>
+      </div>
+
+      <!-- สถานะกำลังโหลด -->
+      <div id="history-status" class="card-panel" style="text-align: center; color: var(--text-muted); margin-bottom: 24px; padding: 60px 24px; font-size: 1.1em; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; width: 100%; box-sizing: border-box;">
+        <i data-lucide="loader-2" class="loader-dark" style="animation: spin 1.5s linear infinite; width: 36px; height: 36px; color: var(--primary); border: none;"></i>
+        <span>กำลังดึงข้อมูล...</span>
+      </div>
+
+      <!-- Container สำหรับการ์ด -->
+      <div id="history-cards-container" class="history-grid">
+        <!-- Cards จะถูกสร้างอัตโนมัติที่นี่ -->
+      </div>
+      
+      <!-- ส่วนควบคุม Pagination -->
+      <div id="history-pagination-container"></div>
+    </div>
+
+    <!-- Detail View: แสดงรายละเอียดเมื่อคลิกแต่ละวัน (Full Width) -->
+    <div id="history-detail-view" style="display: none; width: 100%;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;" class="print-hide">
+        <button class="btn btn-outline" style="width: auto; padding: 10px 20px; background: white;" onclick="app.closeHistoryDetail()">
+          <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> กลับไปหน้ารายการ
+        </button>
+        <button class="btn btn-primary" style="width: auto; padding: 10px 20px;" onclick="window.print()">
+          <i data-lucide="printer" style="width: 18px; height: 18px;"></i> พิมพ์ / ส่งออก PDF
+        </button>
+      </div>
+      
+      <div class="card-panel" style="padding: 32px; width: 100%;">
+        <div style="font-size: 1.4em; font-weight: 700; color: var(--primary); margin-bottom: 32px; text-align: center; display: flex; justify-content: center; align-items: center; gap: 10px;" id="history-detail-title">
+          📅 วันที่ ...
+        </div>
+        
+        <div style="margin-bottom: 12px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="edit-3" style="width: 22px; height: 22px; color: var(--primary);"></i> รายละเอียดการทำงาน (โดยแอดมิน)
+        </div>
+        <div id="history-detail-text" style="background: #f8fafc; padding: 24px; border-radius: 16px; border: 1px solid var(--border-color); white-space: pre-wrap; line-height: 1.7; color: var(--text-main); margin-bottom: 40px; min-height: 100px; font-size: 1.05em;">
+          ไม่มีบันทึก
+        </div>
+
+        <div style="margin-bottom: 12px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="users" style="width: 22px; height: 22px; color: var(--success);"></i> รายชื่อผู้เข้างาน
+        </div>
+        <div class="table-container">
+          <table style="width: 100%;">
+            <thead>
+              <tr>
+                <th style="width: 60px; text-align: center;">ลำดับ</th>
+                <th>ชื่อพนักงาน</th>
+                <th>เข้างาน</th>
+                <th>เลิกงาน</th>
+              </tr>
+            </thead>
+            <tbody id="history-detail-tbody">
+              <!-- Workers จะถูกสร้างอัตโนมัติที่นี่ -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="app-container" style="padding-top: 20px;">
-    
-    <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 16px;">
-        <button class="btn btn-primary" style="width: auto; flex-shrink: 0; padding: 8px 16px; border-radius: 20px; font-size: 0.9em;" id="tab-btn-daily" onclick="app.switchReportTab('daily')">สรุปรายวัน</button>
-        <button class="btn btn-outline" style="width: auto; flex-shrink: 0; padding: 8px 16px; border-radius: 20px; font-size: 0.9em;" id="tab-btn-detail" onclick="app.switchReportTab('detail')">ประวัติทั้งหมด</button>
-        <button class="btn btn-outline" style="width: auto; flex-shrink: 0; padding: 8px 16px; border-radius: 20px; font-size: 0.9em;" id="tab-btn-employee" onclick="app.switchReportTab('employee')">ข้อมูลพนักงาน</button>
-    </div>
 
-    <div id="filter-box" class="card" style="display: flex; gap: 8px;">
-        <input type="date" id="report-date" class="form-control" style="padding: 10px;">
-        <button class="btn btn-primary" style="width: 50px; padding: 0;" onclick="app.loadReportData()"><i data-lucide="search"></i></button>
-    </div>
+</div> <!-- End App Container -->
 
-    <div id="report-status" style="text-align: center; padding: 20px; color: var(--text-muted); display: none;">กำลังโหลด...</div>
-
-    <div id="tab-daily" style="display: block;">
-        <div class="table-container">
-            <table id="daily-table">
-                <thead><tr><th>ชื่อพนักงาน</th><th>เข้า</th><th>เลิก</th></tr></thead>
-                <tbody id="daily-tbody"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <div id="tab-detail" style="display: none;">
-        <div class="table-container">
-            <table id="detail-table">
-                <thead><tr><th>วันที่</th><th>เวลา</th><th>ชื่อ</th><th>สถานะ</th><th class="super-only" style="display:none; text-align:center;">ลบ</th></tr></thead>
-                <tbody id="detail-tbody"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <div id="tab-employee" style="display: none;">
-        <div class="table-container">
-            <table id="employee-table">
-                <thead><tr><th>รูป</th><th>ชื่อ</th><th class="super-only" style="display:none; text-align:center;">ลบ</th></tr></thead>
-                <tbody id="employee-tbody"></tbody>
-            </table>
-        </div>
-    </div>
-
-  </div>
-</div>
-
+<!-- =========================================================
+     MODAL: CLOCK IN / OUT CONFIRMATION
+     ========================================================= -->
 <div class="modal-backdrop" id="scan-modal">
   <div class="modal">
-    <div style="width: 40px; height: 5px; background: #cbd5e1; border-radius: 5px; margin: -10px auto 20px;"></div>
-    <div style="width: 60px; height: 60px; background: #e0e7ff; color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
-        <i data-lucide="user-check" style="width: 30px; height: 30px;"></i>
+    <div class="modal-icon">
+      <i data-lucide="user-check" style="width: 100%; height: 100%;"></i>
     </div>
-    <div style="color: var(--text-muted); font-size: 0.9em; margin-bottom: 4px;">ตรวจพบบุคคล</div>
-    <div id="modal-user-name" style="font-size: 1.6em; font-weight: 700; color: #1e293b; margin-bottom: 20px;">-</div>
+    <div style="color: var(--text-muted); font-size: 0.95em; margin-bottom: 6px; font-weight: 600;">ตรวจพบบุคคล</div>
+    <div class="modal-name" id="modal-user-name">ชื่อพนักงาน</div>
+    
+    <div style="margin-bottom: 16px; font-size: 0.9em; color: var(--text-muted); background: #f1f5f9; padding: 10px; border-radius: 10px;">
+      ระยะความแม่นยำ: <span id="modal-score" style="font-weight: 700; color: var(--primary);">0.00</span>
+    </div>
 
-    <div id="modal-time-log" style="display: flex; gap: 10px; margin-bottom: 20px; display: none;"></div>
+    <div id="modal-time-log" style="display: flex; gap: 12px; justify-content: center; margin-bottom: 20px; display: none;"></div>
 
-    <div id="modal-action-grid" style="margin-bottom: 12px;"></div>
-    <button class="btn btn-outline" onclick="app.closeModal()" style="border: none; color: var(--danger); background: #fee2e2;">ไม่ใช่ฉัน (ยกเลิก)</button>
+    <div class="modal-grid" id="modal-action-grid" style="grid-template-columns: 1fr; margin-bottom: 12px;">
+    </div>
+    
+    <button class="btn btn-outline" style="padding: 14px; font-size: 0.95em;" onclick="app.closeModal()">
+      ไม่ใช่ฉัน (ยกเลิก)
+    </button>
   </div>
 </div>
 
+<!-- Image View Modal -->
 <div id="imageModal" class="image-modal-overlay" onclick="app.closeImageModal(event)">
   <div class="image-modal-content">
     <button class="image-modal-close" onclick="app.closeImageModal(event)"><i data-lucide="x" style="width: 20px; height: 20px;"></i></button>
@@ -448,12 +987,15 @@
   </div>
 </div>
 
+<!-- =========================================================
+     APPLICATION LOGIC (JAVASCRIPT)
+     ========================================================= -->
 <script>
 // ⚠️ สำคัญมาก: กรุณานำ URL และ Anon Key ของคุณจาก Supabase มาใส่ตรงนี้ครับ!
 const SUPABASE_URL = 'https://ghlyttpuccetsqdguogy.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdobHl0dHB1Y2NldHNxZGd1b2d5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MzYyODIsImV4cCI6MjA5MzAxMjI4Mn0.EoEPtpNGumj2HRwU67TUrkar3C5i644wkZWfluKve-c';
+// =========================================================================
 
-// --- CORE APP LOGIC ---
 const MATCH_THRESHOLD = 0.48; 
 
 const app = {
@@ -467,13 +1009,46 @@ const app = {
   currentLng: null,
   matchedName: null,
   regCounter: 0,
+  calendarData: {},
   sysConfig: null,
+  historyData: {}, 
+  historySortedDates: [],
+  historyCurrentPage: 1,
+  historyItemsPerPage: 20,
 
+  formatThaiDate(dateStr) {
+    if (!dateStr || dateStr === '-') return '-';
+    if (typeof dateStr === 'string' && dateStr.includes('T')) {
+      try {
+        const d = new Date(dateStr);
+        const bkkDate = new Date(d.toLocaleString("en-US", {timeZone: "Asia/Bangkok"}));
+        const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        return `${bkkDate.getDate()} ${thaiMonths[bkkDate.getMonth()]} ${bkkDate.getFullYear() + 543}`;
+      } catch(e) {}
+    }
+    const parts = String(dateStr).split('/');
+    if (parts.length !== 3) return dateStr;
+    const day = parseInt(parts[0], 10);
+    const monthIndex = parseInt(parts[1], 10) - 1;
+    let year = parseInt(parts[2], 10);
+    if (year < 2500) year += 543; 
+    const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    return `${day} ${thaiMonths[monthIndex]} ${year}`;
+  },
+  
   formatThaiTime(timeStr) {
     if(!timeStr) return '-';
     const parts = String(timeStr).split(':');
     if (parts.length >= 2) return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')} น.`;
     return timeStr;
+  },
+
+  highlightText(text, keywords) {
+    if (!text || !keywords || keywords.length === 0) return text;
+    const sortedKeywords = [...keywords].sort((a, b) => b.length - a.length);
+    const escapedKeywords = sortedKeywords.map(kw => kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const regex = new RegExp(`(${escapedKeywords.join('|')})`, 'gi');
+    return String(text).replace(regex, '<span class="highlight-search">$1</span>');
   },
 
   setHtmlAndIcons(elId, htmlStr) {
@@ -484,7 +1059,7 @@ const app = {
   async init() {
     lucide.createIcons();
     
-    // บังคับเชื่อมต่อ Supabase ทันทีที่เข้าเว็บโดยใช้ค่าคงที่ (ข้ามหน้า Setup 100%)
+    // เชื่อมต่อ Supabase อัตโนมัติจากโค้ดที่ฝังไว้
     try {
       this.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       this.navigate('view-home');
@@ -497,36 +1072,40 @@ const app = {
     this.stopCamera();
     if(this.scanInterval) { clearTimeout(this.scanInterval); this.scanInterval = null; }
 
-    document.querySelectorAll('.view').forEach(el => {
-        el.classList.remove('active');
-        setTimeout(() => { if(!el.classList.contains('active')) el.style.display = 'none'; }, 300);
-    });
-    
-    const target = document.getElementById(viewId);
-    target.style.display = (viewId === 'view-scan') ? 'block' : 'flex';
-    if(viewId !== 'view-setup') target.style.flexDirection = 'column';
-    setTimeout(() => target.classList.add('active'), 10);
-    
+    document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
     this.currentView = viewId;
 
     if(viewId === 'view-scan') this.initScanView();
     if(viewId === 'view-register') this.initRegisterView();
     if(viewId === 'view-config') this.loadConfigData();
     if(viewId === 'view-report') this.switchReportTab('daily');
-    if(viewId === 'view-admin-dashboard') {
-        const role = localStorage.getItem('adminRole');
-        const badge = document.getElementById('dash-role-badge');
-        if(role === 'superadmin') { badge.innerText = '⭐ Superadmin'; badge.style.background = '#fef08a'; badge.style.color = '#b45309'; } 
-        else { badge.innerText = 'Admin'; badge.style.background = '#e2e8f0'; badge.style.color = '#475569'; }
+    if(viewId === 'view-work-history') this.initWorkHistory();
+    if(viewId === 'view-admin-dashboard') this.updateDashboardRoleUI();
+  },
+
+  updateDashboardRoleUI() {
+    const role = localStorage.getItem('adminRole');
+    const badge = document.getElementById('dash-role-badge');
+    if(badge) {
+      if(role === 'superadmin') {
+        badge.innerText = '⭐ Superadmin';
+        badge.style.background = '#fef08a';
+        badge.style.color = '#b45309';
+      } else {
+        badge.innerText = 'Admin';
+        badge.style.background = '#e2e8f0';
+        badge.style.color = '#475569';
+      }
     }
   },
 
   async loadAIModels(badgeId) {
     if(this.modelsLoaded) {
-      this.setHtmlAndIcons(badgeId, '<i data-lucide="check-circle-2" style="color:var(--success);"></i> AI พร้อม');
+      this.setHtmlAndIcons(badgeId, '<i data-lucide="check-circle-2" style="width: 18px; height: 18px; color: var(--success);"></i> AI พร้อมใช้งาน');
       return true;
     }
-    this.setHtmlAndIcons(badgeId, '<svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> โหลด AI...');
+    this.setHtmlAndIcons(badgeId, '<i data-lucide="loader-2" class="loader-dark" style="border:none; animation: spin 1.5s linear infinite; width: 18px; height: 18px;"></i> โหลด AI Model...');
     const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
     try {
       await Promise.all([
@@ -535,11 +1114,12 @@ const app = {
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
       ]);
       this.modelsLoaded = true;
-      this.setHtmlAndIcons(badgeId, '<i data-lucide="check-circle-2" style="color:var(--success);"></i> AI พร้อม');
+      this.setHtmlAndIcons(badgeId, '<i data-lucide="check-circle-2" style="width: 18px; height: 18px; color: var(--success);"></i> AI พร้อมใช้งาน');
       return true;
     } catch (e) {
-      this.setHtmlAndIcons(badgeId, '<i data-lucide="x-circle" style="color:var(--danger);"></i> โหลด AI ล้มเหลว');
-      throw new Error("โหลด AI ล้มเหลว");
+      this.setHtmlAndIcons(badgeId, '<i data-lucide="x-circle" style="width: 18px; height: 18px; color: var(--danger);"></i> โหลดล้มเหลว');
+      Swal.fire({ icon: 'error', title: 'โหลด AI ล้มเหลว', text: e.message, confirmButtonColor: '#4f46e5' });
+      throw new Error("โหลด AI Model ล้มเหลว");
     }
   },
 
@@ -796,11 +1376,12 @@ const app = {
     document.getElementById('reg-name').disabled = false; 
     document.getElementById('reg-msg').innerText = '';
     
+    this.resetRegBtn('บันทึกใบหน้า');
     const btn = document.getElementById('btn-save-face');
-    btn.disabled = true; btn.innerHTML = '<i data-lucide="save"></i> บันทึกใบหน้า <span style="background:rgba(0,0,0,0.2); border-radius:10px; padding:2px 8px; margin-left:5px;">0/3</span>';
+    btn.disabled = true; btn.classList.remove('btn-success'); btn.classList.add('btn-primary');
 
     const pAI = this.loadAIModels('reg-badge');
-    const pCamera = navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } }).then(async stream => {
+    const pCamera = navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } }).then(async stream => {
       this.currentStream = stream;
       const video = document.getElementById('reg-video');
       video.srcObject = stream;
@@ -809,10 +1390,10 @@ const app = {
 
     try {
       await Promise.all([pAI, pCamera]);
-      this.setHtmlAndIcons('reg-badge', '<i data-lucide="camera" style="width: 16px; height: 16px;"></i> กล้องและ AI พร้อมใช้งาน');
+      this.setHtmlAndIcons('reg-badge', '<i data-lucide="camera" style="width: 18px; height: 18px;"></i> กล้องและ AI พร้อมใช้งาน');
       btn.disabled = false; 
     } catch(e) {
-      this.setHtmlAndIcons('reg-badge', `<i data-lucide="alert-circle" style="color:var(--danger);"></i> ${e.message}`);
+      this.setHtmlAndIcons('reg-badge', `<i data-lucide="alert-circle" style="width: 18px; height: 18px; color: var(--danger);"></i> ${e.message}`);
     }
   },
 
@@ -821,29 +1402,34 @@ const app = {
 
     const nameInput = document.getElementById('reg-name');
     const name = nameInput.value.trim();
-    if(!name) return Swal.fire('แจ้งเตือน', 'กรุณาระบุชื่อพนักงาน', 'warning');
+    if(!name) return Swal.fire({ icon: 'warning', title: 'แจ้งเตือน', text: 'กรุณาระบุชื่อพนักงานให้เรียบร้อย' });
 
     const btn = document.getElementById('btn-save-face');
+    const msg = document.getElementById('reg-msg');
     btn.disabled = true;
 
     if (this.regCounter === 0) {
-      btn.innerHTML = 'ตรวจสอบสิทธิ์...';
+      this.setHtmlAndIcons('btn-save-face', '<span class="loader"></span> ตรวจสอบสิทธิ์...');
       try {
         const { data: existing, error } = await this.supabase.from('users').select('name').eq('name', name);
         if (existing && existing.length > 0) {
-          Swal.fire('ผิดพลาด', `ชื่อ "${name}" ถูกลงทะเบียนไปแล้ว`, 'error');
-          btn.innerHTML = '<i data-lucide="save"></i> บันทึกใบหน้า'; btn.disabled = false; lucide.createIcons(); return;
+          msg.innerHTML = `<span style="color:var(--danger)">ชื่อ "${name}" ถูกลงทะเบียนไปแล้ว ไม่สามารถทำซ้ำได้</span>`;
+          return this.resetRegBtn();
         }
-      } catch(e) {}
+      } catch(e) {
+        msg.innerHTML = `<span style="color:var(--danger)">ตรวจสอบข้อมูลล้มเหลว</span>`;
+        return this.resetRegBtn();
+      }
     }
 
-    btn.innerHTML = 'กำลังประมวลผล...';
+    this.setHtmlAndIcons('btn-save-face', '<span class="loader"></span> กำลังประมวลผล...');
+
     const video = document.getElementById('reg-video');
     const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
 
     if(!detection) {
-      Swal.fire({toast:true, title:'ไม่พบใบหน้า กรุณามองกล้อง', position:'top', icon:'error', showConfirmButton:false, timer:2000});
-      btn.innerHTML = '<i data-lucide="save"></i> บันทึกมุมต่อไป'; btn.disabled = false; lucide.createIcons(); return;
+      msg.innerHTML = `<span style="color:var(--danger)">ไม่พบใบหน้า กรุณามองกล้องให้ชัดเจน</span>`;
+      return this.resetRegBtn(this.regCounter === 0 ? 'บันทึกใบหน้า' : 'บันทึกมุมต่อไป');
     }
 
     let photoBase64 = null;
@@ -866,35 +1452,41 @@ const app = {
       
       this.regCounter++;
       nameInput.disabled = true; 
+      msg.innerHTML = `<span style="color:var(--success)">บันทึกมุมที่ ${this.regCounter} สำเร็จ!</span>`;
       
       if(this.regCounter >= 3) {
-        Swal.fire({icon: 'success', title: 'ลงทะเบียนครบถ้วน!', showConfirmButton: false, timer: 2000});
-        setTimeout(() => this.navigate('view-home'), 2000);
+        msg.innerHTML += '<br><b style="color: var(--primary); font-size: 1.1em; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 12px;"><i data-lucide="check-circle-2" style="width: 20px; height: 20px;"></i> ลงทะเบียนครบถ้วน ดำเนินการเสร็จสิ้น</b><span style="display: block; color: var(--text-muted); font-size: 0.9em; margin-top: 4px;">ระบบกำลังพากลับหน้าหลักอัตโนมัติ...</span>';
+        lucide.createIcons({ root: msg });
+        this.setHtmlAndIcons('btn-save-face', `<i data-lucide="check-check" style="width: 22px; height: 22px;"></i> เสร็จเรียบร้อย`);
+        btn.disabled = true; btn.classList.remove('btn-primary'); btn.classList.add('btn-success');
+        setTimeout(() => this.navigate('view-home'), 3000);
       } else {
-        Swal.fire({toast:true, title:`บันทึกมุมที่ ${this.regCounter} สำเร็จ`, text:'ขยับหน้าเล็กน้อยแล้วกดอีกครั้ง', position:'top', icon:'success', showConfirmButton:false, timer:2000});
-        btn.innerHTML = `<i data-lucide="save"></i> บันทึกมุมต่อไป <span style="background:rgba(0,0,0,0.2); border-radius:10px; padding:2px 8px; margin-left:5px;">${this.regCounter}/3</span>`; 
-        btn.disabled = false; lucide.createIcons();
+        msg.innerHTML += '<br><span style="color: var(--text-muted);">กรุณาขยับหน้าเล็กน้อยแล้วกดบันทึกอีกครั้ง</span>';
+        this.resetRegBtn('บันทึกมุมต่อไป');
       }
     } catch(e) {
-      if (e.message && e.message.includes('security policy')) {
-          Swal.fire('ฐานข้อมูลถูกล็อก', 'กรุณาไปที่ Supabase > SQL Editor และรันคำสั่งปิด RLS สำหรับตาราง users', 'error');
-      } else {
-          Swal.fire('Error', e.message, 'error');
-      }
-      btn.innerHTML = '<i data-lucide="save"></i> ลองอีกครั้ง'; btn.disabled = false; lucide.createIcons();
+      msg.innerHTML = `<span style="color:var(--danger)">Error: ${e.message}</span>`;
+      this.resetRegBtn(this.regCounter === 0 ? 'บันทึกใบหน้า' : 'บันทึกมุมต่อไป');
     }
+  },
+
+  resetRegBtn(text = 'บันทึกใบหน้า') {
+    this.setHtmlAndIcons('btn-save-face', `<i data-lucide="save" style="width: 22px; height: 22px;"></i> ${text} <span id="reg-count" style="background: rgba(255,255,255,0.25); padding: 2px 10px; border-radius: 12px; font-size: 0.85em; margin-left: 6px;">${this.regCounter}/3</span>`);
+    document.getElementById('btn-save-face').disabled = false;
   },
 
   // ---------------------------------------------------------
   // SCAN
   // ---------------------------------------------------------
   async initScanView() {
+    document.getElementById('btn-start-scan').style.display = 'flex';
     document.getElementById('btn-start-scan').disabled = true;
     document.getElementById('scan-line').style.display = 'none';
 
-    this.setHtmlAndIcons('scan-gps-status', '<svg class="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ตรวจสอบพิกัด...');
+    this.setHtmlAndIcons('scan-sys-status', '<i data-lucide="loader-2" class="loader-dark" style="border:none; animation: spin 1.5s linear infinite; width: 20px; height: 20px; color: var(--text-muted);"></i> กำลังเตรียมระบบทั้งหมด...');
+    this.setHtmlAndIcons('scan-gps-status', '<i data-lucide="loader-2" class="loader-dark" style="border:none; animation: spin 1.5s linear infinite; width: 16px; height: 16px;"></i> ตรวจสอบตำแหน่ง...');
 
-    const pCamera = navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } }).then(async stream => {
+    const pCamera = navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } }).then(async stream => {
       this.currentStream = stream;
       const video = document.getElementById('scan-video');
       video.srcObject = stream;
@@ -911,11 +1503,11 @@ const app = {
 
     try {
       await Promise.all([pCamera, pGPS, pAI, pDB]);
+      this.setHtmlAndIcons('scan-sys-status', '<span style="color:var(--success); font-weight: 700;"><i data-lucide="check-circle-2" style="width: 20px; height: 20px; vertical-align: middle;"></i> ระบบพร้อมใช้งาน</span>');
       document.getElementById('btn-start-scan').disabled = false;
-      this.setHtmlAndIcons('scan-badge', '<i data-lucide="scan" style="width: 16px; height: 16px;"></i> พร้อมแล้ว แตะปุ่มเริ่มสแกน');
+      this.setHtmlAndIcons('scan-badge', '<i data-lucide="scan" style="width: 18px; height: 18px;"></i> กล้องพร้อมแล้ว แตะเพื่อสแกน');
     } catch(e) {
-      Swal.fire({toast:true, title:e.message, icon:'error', position:'top'});
-      this.setHtmlAndIcons('scan-badge', '<i data-lucide="alert-circle" style="color:var(--danger);"></i> ' + e.message);
+      this.setHtmlAndIcons('scan-sys-status', `<span style="color:var(--danger); font-weight: 600;"><i data-lucide="alert-circle" style="width: 20px; height: 20px; vertical-align: middle;"></i> ${e.message}</span>`);
     }
   },
 
@@ -929,16 +1521,17 @@ const app = {
 
       if (config && config.office_ip && ipData.ip === config.office_ip) {
         this.currentLat = config.lat || 0; this.currentLng = config.lng || 0;
-        this.setHtmlAndIcons('scan-gps-status', `<i data-lucide="wifi" style="width: 16px; height: 16px;"></i> ใช้ Wi-Fi ออฟฟิศ`);
+        this.setHtmlAndIcons('scan-gps-status', `<i data-lucide="wifi" style="width: 16px; height: 16px;"></i> ยืนยันตำแหน่งผ่าน Wi-Fi ออฟฟิศแล้ว`);
         return; 
       }
 
+      this.setHtmlAndIcons('scan-gps-status', `<i data-lucide="map-pin" style="width: 16px; height: 16px;"></i> กำลังตรวจสอบพิกัด GPS...`);
       const pos = await this.getAccurateLocation();
       this.currentLat = pos.coords.latitude; this.currentLng = pos.coords.longitude;
       const accuracy = Math.round(pos.coords.accuracy);
 
       if (!config || !config.lat || !config.lng || config.radius == 0) {
-        this.setHtmlAndIcons('scan-gps-status', `<i data-lucide="map" style="width: 16px; height: 16px;"></i> นอกพื้นที่ (±${accuracy}ม.)`);
+        this.setHtmlAndIcons('scan-gps-status', `<i data-lucide="map" style="width: 16px; height: 16px;"></i> GPS: นอกพื้นที่/ไม่จำกัด (±${accuracy}ม.)`);
         return; 
       }
       
@@ -947,9 +1540,11 @@ const app = {
       const effectiveDist = Math.max(0, dist - allowance);
 
       if (effectiveDist <= config.radius) {
-        this.setHtmlAndIcons('scan-gps-status', `<i data-lucide="map-pin" style="width: 16px; height: 16px;"></i> อยู่ในพื้นที่ (${Math.round(dist)}ม.)`);
+        let accWarn = accuracy > 15 ? ` <span style="color:#f59e0b;font-size:0.85em;">(สัญญาณอ่อน ±${accuracy}ม.)</span>` : ` (±${accuracy}ม.)`;
+        this.setHtmlAndIcons('scan-gps-status', `<i data-lucide="map-pin" style="width: 16px; height: 16px;"></i> GPS: อยู่ในพื้นที่ (${Math.round(dist)} เมตร)${accWarn}`);
       } else {
-        throw new Error(`อยู่นอกพื้นที่กำหนด (${Math.round(dist)} ม.)`);
+        let extraMsg = accuracy > 15 ? ` <br><span style="font-size: 0.85em; color: #f59e0b;">(สัญญาณอ่อน ±${accuracy}ม. แนะนำให้ออกที่โล่ง หรือต่อ Wi-Fi ออฟฟิศ)</span>` : '';
+        throw new Error(`อยู่นอกพื้นที่กำหนด (${Math.round(dist)} ม. / ${config.radius} ม.)${extraMsg}`);
       }
     } catch(e) {
       throw new Error(e.message || 'ตรวจสอบ GPS ล้มเหลว');
@@ -957,11 +1552,13 @@ const app = {
   },
 
   async startScanning() {
-    document.getElementById('btn-start-scan').style.display = 'none';
-    this.setHtmlAndIcons('scan-badge', '<i data-lucide="scan-face" style="width: 16px; height: 16px;"></i> กำลังสแกน...');
+    const btn = document.getElementById('btn-start-scan');
+    btn.style.display = 'none';
+    this.setHtmlAndIcons('scan-badge', '<i data-lucide="scan-face" style="width: 18px; height: 18px;"></i> กำลังสแกน... มองกล้อง');
     document.getElementById('scan-line').style.display = 'block';
 
     const video = document.getElementById('scan-video');
+    await video.play().catch(e=>{}); 
 
     const scanFrame = async () => {
       if (this.currentView !== 'view-scan' || video.paused || video.ended) return;
@@ -980,6 +1577,8 @@ const app = {
             if(this.scanInterval) clearTimeout(this.scanInterval);
             this.showConfirmModal(best.name, best.distance);
             return; 
+          } else {
+            this.setHtmlAndIcons('scan-badge', `<i data-lucide="user-x" style="width: 18px; height: 18px;"></i> ไม่รู้จัก (${best.distance.toFixed(2)})`);
           }
         }
       } catch (e) {}
@@ -993,28 +1592,39 @@ const app = {
     document.getElementById('scan-video').pause();
     this.matchedName = name;
     document.getElementById('modal-user-name').innerText = name;
+    const accuracy = ((1 - distance) * 100).toFixed(1);
+    document.getElementById('modal-score').innerText = `${accuracy}%`;
     document.getElementById('scan-modal').style.display = 'flex';
 
     const btnGrid = document.getElementById('modal-action-grid');
-    btnGrid.innerHTML = `<button class="btn btn-outline" disabled style="padding: 16px; border:none;"><svg class="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24" style="color:var(--primary)"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ตรวจสอบสถานะ...</button>`;
+    const timeLog = document.getElementById('modal-time-log');
+    
+    btnGrid.innerHTML = `<button class="btn btn-outline" disabled style="padding: 16px; opacity: 1; border-color: var(--primary); color: var(--primary); justify-content: center;"><i data-lucide="loader-2" class="loader-dark" style="animation: spin 1.5s linear infinite; width: 20px; height: 20px;"></i> ตรวจสอบสถานะวันนี้...</button>`;
+    timeLog.style.display = 'none';
+    lucide.createIcons({ root: btnGrid });
 
-    // หาเวลาวันนี้แบบ Text DD/MM/YYYY ตามฟอร์แมตเดิม
+    // หาเวลาวันนี้แบบ Text DD/MM/YYYY
     const bkkDate = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Bangkok"}));
     const todayStr = `${String(bkkDate.getDate()).padStart(2, '0')}/${String(bkkDate.getMonth() + 1).padStart(2, '0')}/${bkkDate.getFullYear()}`;
 
-    // เช็คจาก Supabase
     const { data: logs } = await this.supabase.from('attendance').select('type, log_time').eq('name', name).eq('log_date', todayStr);
     
-    let hasIn = false; let hasOut = false;
+    let hasIn = false; let hasOut = false; let timeIn = '-'; let timeOut = '-';
     if (logs) {
         logs.forEach(l => {
-            if(l.type === 'เข้างาน') hasIn = true;
-            if(l.type === 'เลิกงาน') hasOut = true;
+            if(l.type === 'เข้างาน') { hasIn = true; timeIn = this.formatThaiTime(l.log_time); }
+            if(l.type === 'เลิกงาน') { hasOut = true; timeOut = this.formatThaiTime(l.log_time); }
         });
     }
 
+    let timeHtml = '';
+    if (hasIn) timeHtml += `<div style="flex: 1; background: rgba(16,185,129,0.08); padding: 12px; border-radius: 12px; border: 1px solid rgba(16,185,129,0.2); text-align: center;"><div style="font-size: 0.85em; color: var(--success); margin-bottom: 2px; font-weight: 600;">เวลาเข้างาน</div><div style="font-weight: 700; font-size: 1.15em; color: #0f172a;">${timeIn}</div></div>`;
+    if (hasOut) timeHtml += `<div style="flex: 1; background: rgba(245,158,11,0.08); padding: 12px; border-radius: 12px; border: 1px solid rgba(245,158,11,0.2); text-align: center;"><div style="font-size: 0.85em; color: var(--warning); margin-bottom: 2px; font-weight: 600;">เวลาเลิกงาน</div><div style="font-weight: 700; font-size: 1.15em; color: #0f172a;">${timeOut}</div></div>`;
+
+    if (timeHtml !== '') { timeLog.innerHTML = timeHtml; timeLog.style.display = 'flex'; } 
+
     if (!hasIn) {
-      btnGrid.innerHTML = `<button class="btn btn-success" onclick="app.submitAttendance('เข้างาน')"><i data-lucide="log-in"></i> บันทึกเข้างาน</button>`;
+      btnGrid.innerHTML = `<button class="btn btn-success" id="btn-clock-in" onclick="app.submitAttendance('เข้างาน')" style="padding: 16px; font-size: 1.1em;"><i data-lucide="log-in" style="width: 22px; height: 22px;"></i> บันทึกเข้างาน</button>`;
     } else if (hasIn && !hasOut) {
       let canReport = false;
       if (this.sysConfig && this.sysConfig.emp_report_access) {
@@ -1037,10 +1647,12 @@ const app = {
       btnGrid.innerHTML = `
         <div style="grid-column: 1 / -1;">
           ${reportHtml}
-          <button class="btn btn-danger" onclick="app.submitAttendance('เลิกงาน')"><i data-lucide="log-out"></i> บันทึกเลิกงาน</button>
+          <button class="btn btn-danger" id="btn-clock-out" onclick="app.submitAttendance('เลิกงาน')" style="padding: 16px; font-size: 1.1em; width: 100%;">
+            <i data-lucide="log-out" style="width: 22px; height: 22px;"></i> บันทึกเลิกงาน
+          </button>
         </div>`;
     } else {
-      btnGrid.innerHTML = `<button class="btn btn-outline" disabled style="color:var(--success); border-color:var(--success);"><i data-lucide="check-check"></i> บันทึกเวลาครบแล้ว</button>`;
+      btnGrid.innerHTML = `<button class="btn btn-outline" disabled style="padding: 16px; font-size: 1.05em; background: rgba(16,185,129,0.05); color: var(--success); border-color: var(--success); opacity: 1;"><i data-lucide="check-check" style="width: 22px; height: 22px;"></i> คุณได้บันทึกเวลาครบแล้ว</button>`;
     }
     lucide.createIcons({ root: btnGrid });
   },
@@ -1049,7 +1661,7 @@ const app = {
     document.getElementById('scan-modal').style.display = 'none';
     this.matchedName = null;
     document.getElementById('scan-video').play().catch(e=>{});
-    this.setHtmlAndIcons('scan-badge', '<i data-lucide="scan" style="width: 16px; height: 16px;"></i> เตรียมกล้อง...');
+    this.setHtmlAndIcons('scan-badge', '<i data-lucide="scan" style="width: 18px; height: 18px;"></i> กล้องพร้อม แตะเพื่อเริ่มสแกน');
     document.getElementById('btn-start-scan').style.display = 'flex';
   },
 
@@ -1068,7 +1680,6 @@ const app = {
     const btn = document.getElementById('modal-action-grid').querySelector('button');
     if(btn) { btn.disabled = true; btn.innerHTML = 'กำลังบันทึก...'; }
 
-    // ดึงเวลาปัจจุบัน BKK
     const d = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Bangkok"}));
     const log_date = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
     const log_time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
@@ -1085,13 +1696,7 @@ const app = {
           map_link: mapLink,
           emp_report: empReportText
       }]);
-      
-      if (error) {
-          if (error.message && error.message.includes('security policy')) {
-              throw new Error('ฐานข้อมูลถูกล็อก (RLS) กรุณาให้ Admin เปิดสิทธิ์การเขียนสำหรับตาราง attendance');
-          }
-          throw error;
-      }
+      if (error) throw error;
 
       Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', text: `บันทึก ${typeStr} เรียบร้อย`, timer: 2500, showConfirmButton: false });
       document.getElementById('scan-modal').style.display = 'none';
@@ -1103,131 +1708,684 @@ const app = {
   },
 
   // ---------------------------------------------------------
-  // REPORTS
+  // REPORTS & HISTORY (ORIGINAL STYLE)
   // ---------------------------------------------------------
   switchReportTab(tab) {
-    const tabs = ['daily', 'detail', 'employee'];
+    const tabs = ['detail', 'summary', 'daily', 'employee'];
     tabs.forEach(t => {
-      const btn = document.getElementById('tab-btn-' + t);
-      const content = document.getElementById('tab-' + t);
+      const btn = document.getElementById('btn-tab-' + t);
+      const container = document.getElementById('table-' + t + '-container');
       if(t === tab) {
-          btn.className = 'btn btn-primary'; btn.style.width='auto'; btn.style.padding='8px 16px'; btn.style.borderRadius='20px'; btn.style.fontSize='0.9em';
-          content.style.display = 'block';
+        btn.style.background = 'var(--primary)';
+        btn.style.borderColor = 'var(--primary)';
+        btn.style.color = 'white';
+        container.style.display = 'block';
       } else {
-          btn.className = 'btn btn-outline'; btn.style.width='auto'; btn.style.padding='8px 16px'; btn.style.borderRadius='20px'; btn.style.fontSize='0.9em';
-          content.style.display = 'none';
+        btn.style.background = 'transparent';
+        btn.style.borderColor = 'var(--border-color)';
+        btn.style.color = 'var(--text-main)';
+        container.style.display = 'none';
       }
     });
 
     const role = localStorage.getItem('adminRole');
-    document.querySelectorAll('.super-only').forEach(el => el.style.display = (role === 'superadmin') ? 'table-cell' : 'none');
+    document.querySelectorAll('.superadmin-only').forEach(el => {
+      el.style.display = (role === 'superadmin') ? 'table-cell' : 'none';
+    });
 
-    // Auto set date to today if empty
-    if(!document.getElementById('report-date').value) {
-        const d = new Date(); document.getElementById('report-date').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if (tab === 'daily') {
+      document.getElementById('filter-monthly').style.display = 'none';
+      document.getElementById('filter-daily').style.display = 'flex';
+      
+      const dateEl = document.getElementById('report-date');
+      if(!dateEl.value) {
+        const bkkDate = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Bangkok"}));
+        const yyyy = bkkDate.getFullYear();
+        const mm = String(bkkDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(bkkDate.getDate()).padStart(2, '0');
+        dateEl.value = `${yyyy}-${mm}-${dd}`;
+      }
+      this.loadDailyReport();
+    } else if (tab === 'employee') {
+      document.getElementById('filter-monthly').style.display = 'flex';
+      document.getElementById('filter-daily').style.display = 'none';
+      
+      const d = new Date();
+      const mEl = document.getElementById('report-month');
+      const yEl = document.getElementById('report-year');
+      if(!mEl.getAttribute('data-init')) {
+        mEl.value = d.getMonth() + 1;
+        yEl.value = d.getFullYear();
+        mEl.setAttribute('data-init', 'true');
+      }
+      this.loadEmployeeData();
+    } else {
+      document.getElementById('filter-monthly').style.display = 'flex';
+      document.getElementById('filter-daily').style.display = 'none';
+      this.loadReportData();
     }
+  },
 
-    this.loadReportData();
+  async loadEmployeeData() {
+    const tbody = document.getElementById('employee-tbody');
+    const status = document.getElementById('report-status');
+    const month = document.getElementById('report-month').value;
+    const year = document.getElementById('report-year').value;
+    const role = localStorage.getItem('adminRole');
+
+    tbody.innerHTML = '';
+    status.style.display = 'block';
+    this.setHtmlAndIcons('report-status', '<i data-lucide="loader-2" class="loader-dark" style="border:none; animation: spin 1.5s linear infinite; width: 24px; height: 24px;"></i> กำลังดึงข้อมูลพนักงาน...');
+
+    const mm = String(month).padStart(2, '0');
+    const dateFilter = `%/${mm}/${year}`;
+
+    try {
+      const [usersRes, logsRes] = await Promise.all([
+        this.supabase.from('users').select('*'),
+        this.supabase.from('attendance').select('*').like('log_date', dateFilter)
+      ]);
+      
+      const employees = usersRes.data || [];
+      const logs = logsRes.data || [];
+      
+      status.style.display = 'none';
+      if(employees.length === 0) {
+         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--text-muted); padding: 30px;">ไม่มีข้อมูลพนักงานในระบบ</td></tr>';
+         return;
+      }
+
+      const attendanceCounts = {};
+      logs.forEach(log => {
+          if (!attendanceCounts[log.name]) attendanceCounts[log.name] = { inDates: new Set(), outDates: new Set() };
+          if (log.type === 'เข้างาน') attendanceCounts[log.name].inDates.add(log.log_date);
+          if (log.type === 'เลิกงาน') attendanceCounts[log.name].outDates.add(log.log_date);
+      });
+
+      employees.forEach((emp, index) => {
+        const counts = attendanceCounts[emp.name] || { inDates: new Set(), outDates: new Set() };
+        const inCount = counts.inDates.size;
+        const outCount = counts.outDates.size;
+
+        const tr = document.createElement('tr');
+        let photoHtml = '<div style="width: 56px; height: 56px; background: #e2e8f0; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: #94a3b8;"><i data-lucide="user" style="width: 24px; height: 24px;"></i></div>';
+        if (emp.photo) {
+          photoHtml = `<img src="${emp.photo}" onclick="app.showImageModal('${emp.photo}')" style="width: 56px; height: 56px; object-fit: cover; border-radius: 14px; border: 2px solid #e2e8f0; cursor: pointer;">`;
+        }
+
+        let regDate = '-'; let regTime = '';
+        if (emp.registered_at) {
+          const d = new Date(emp.registered_at);
+          regDate = this.formatThaiDate(`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`);
+          regTime = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} น.`;
+        }
+
+        let actionHtml = '';
+        if (role === 'superadmin') {
+          const safeName = emp.name.replace(/'/g, "\\'"); 
+          actionHtml = `<td class="print-hide action-cell" style="vertical-align: middle;">
+            <button class="btn btn-outline btn-sm" onclick="app.editUserRecord('${safeName}')"><i data-lucide="edit" style="width:14px; height:14px;"></i> แก้ไข</button>
+            <button class="btn btn-outline btn-sm" style="color:var(--danger); border-color:#fecaca;" onclick="app.deleteUserRecord('${safeName}')"><i data-lucide="trash-2" style="width:14px; height:14px;"></i> ลบ</button>
+          </td>`;
+        }
+
+        tr.innerHTML = `
+          <td style="text-align: center; color: var(--text-muted); font-weight: 600;">${index + 1}</td>
+          <td style="padding: 12px 20px; width: 80px;">${photoHtml}</td>
+          <td style="font-weight: 600; color: #1e293b; font-size: 1.1em; vertical-align: middle;">${emp.name}</td>
+          <td style="text-align: center; font-weight: 600; color: var(--success); vertical-align: middle;">${inCount} วัน</td>
+          <td style="text-align: center; font-weight: 600; color: var(--warning); vertical-align: middle;">${outCount} วัน</td>
+          <td style="vertical-align: middle;">
+            <div style="font-weight: 500; color: #334155;"><i data-lucide="calendar" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i> ${regDate}</div>
+            <div style="font-size: 0.9em; color: var(--text-muted); margin-top: 4px;"><i data-lucide="clock" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i> ${regTime}</div>
+          </td>
+          ${actionHtml}
+        `;
+        tbody.appendChild(tr);
+      });
+      lucide.createIcons({ root: tbody });
+    } catch(e) {
+      status.style.display = 'block';
+      this.setHtmlAndIcons('report-status', `<span style="color:var(--danger);"><i data-lucide="alert-circle"></i> Error: ${e.message}</span>`);
+    }
   },
 
   async loadReportData() {
-    document.getElementById('report-status').style.display = 'block';
-    
-    // ดึงวันที่จาก Date picker แปลงเป็น DD/MM/YYYY
-    const dateVal = document.getElementById('report-date').value;
-    if(!dateVal) return;
-    const dArr = dateVal.split('-');
-    const searchDateStr = `${dArr[2]}/${dArr[1]}/${dArr[0]}`; // DD/MM/YYYY
-
+    const tbody = document.getElementById('report-tbody');
+    const userSelect = document.getElementById('summary-user-select');
+    const calendarArea = document.getElementById('calendar-render-area');
+    const status = document.getElementById('report-status');
     const role = localStorage.getItem('adminRole');
+    
+    const mEl = document.getElementById('report-month');
+    const yEl = document.getElementById('report-year');
+
+    tbody.innerHTML = ''; userSelect.innerHTML = ''; calendarArea.innerHTML = '';
+    this.calendarData = {}; status.style.display = 'block';
+    this.setHtmlAndIcons('report-status', '<i data-lucide="loader-2" class="loader-dark" style="animation: spin 1.5s linear infinite;"></i> กำลังดึงข้อมูล...');
+
+    const mm = String(mEl.value).padStart(2, '0');
+    const dateFilter = `%/${mm}/${yEl.value}`;
 
     try {
-        // 1. Load Daily Tab
-        if(document.getElementById('tab-daily').style.display === 'block') {
-            const tbody = document.getElementById('daily-tbody'); tbody.innerHTML = '';
-            const { data: logs } = await this.supabase.from('attendance').select('*').eq('log_date', searchDateStr);
-            
-            if(!logs || logs.length === 0) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">ไม่มีข้อมูล</td></tr>'; }
-            else {
-                let sum = {};
-                logs.forEach(l => {
-                    if(!sum[l.name]) sum[l.name] = {in:'-', out:'-'};
-                    if(l.type === 'เข้างาน') sum[l.name].in = l.log_time;
-                    if(l.type === 'เลิกงาน') sum[l.name].out = l.log_time;
-                });
-                Object.keys(sum).forEach(name => {
-                    tbody.innerHTML += `<tr><td>${name}</td><td class="type-in">${this.formatThaiTime(sum[name].in)}</td><td class="type-out">${this.formatThaiTime(sum[name].out)}</td></tr>`;
-                });
-            }
-        }
+      const { data: logs, error } = await this.supabase.from('attendance')
+        .select('*').like('log_date', dateFilter).order('id', {ascending: false});
+      if(error) throw error;
+      
+      status.style.display = 'none';
+      if(!logs || logs.length === 0) {
+         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--text-muted); padding: 30px;">ไม่มีข้อมูลในเดือนนี้</td></tr>';
+         userSelect.innerHTML = '<option>ไม่มีข้อมูล</option>';
+         calendarArea.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding: 40px;">ไม่มีบันทึกการทำงานในเดือนนี้</div>';
+         return;
+      }
+
+      logs.forEach((log, index) => {
+        let dateParts = log.log_date.split('/'); 
+        let dayNum = parseInt(dateParts[0], 10);
         
-        // 2. Load Detail Tab
-        if(document.getElementById('tab-detail').style.display === 'block') {
-            const tbody = document.getElementById('detail-tbody'); tbody.innerHTML = '';
-            const { data: logs } = await this.supabase.from('attendance').select('*').eq('log_date', searchDateStr).order('log_time', {ascending:false});
-            
-            if(!logs || logs.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">ไม่มีข้อมูล</td></tr>'; }
-            else {
-                logs.forEach(l => {
-                    let action = role==='superadmin' ? `<td style="text-align:center;"><button onclick="app.deleteLog(${l.id})" style="color:var(--danger); background:none; border:none; padding:4px;"><i data-lucide="trash-2" style="width:16px;"></i></button></td>` : '';
-                    tbody.innerHTML += `<tr><td>${l.log_date}</td><td>${this.formatThaiTime(l.log_time)}</td><td>${l.name}</td><td class="${l.type==='เข้างาน'?'type-in':'type-out'}">${l.type}</td>${action}</tr>`;
-                });
-                lucide.createIcons({ root: tbody });
-            }
+        if(!this.calendarData[log.name]) this.calendarData[log.name] = {};
+        if(!this.calendarData[log.name][dayNum]) this.calendarData[log.name][dayNum] = { in: false, out: false, timeIn: '-', timeOut: '-', empReport: '' };
+        
+        if(log.type === 'เข้างาน') { 
+          this.calendarData[log.name][dayNum].in = true; 
+          this.calendarData[log.name][dayNum].timeIn = this.formatThaiTime(log.log_time); 
+        }
+        if(log.type === 'เลิกงาน') { 
+          this.calendarData[log.name][dayNum].out = true; 
+          this.calendarData[log.name][dayNum].timeOut = this.formatThaiTime(log.log_time); 
+          this.calendarData[log.name][dayNum].empReport = log.emp_report || '';
         }
 
-        // 3. Load Employee Tab
-        if(document.getElementById('tab-employee').style.display === 'block') {
-            const tbody = document.getElementById('employee-tbody'); tbody.innerHTML = '';
-            const { data: users } = await this.supabase.from('users').select('id, name, photo');
-            
-            if(!users || users.length === 0) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">ไม่มีข้อมูลพนักงาน</td></tr>'; }
-            else {
-                users.forEach(u => {
-                    let img = u.photo ? `<img src="${u.photo}" onclick="app.showImageModal('${u.photo}')" style="width:40px; height:40px; border-radius:10px; object-fit:cover; cursor:pointer;">` : `<div style="width:40px; height:40px; background:#e2e8f0; border-radius:10px;"></div>`;
-                    let action = role==='superadmin' ? `<td style="text-align:center;"><button onclick="app.deleteUser(${u.id}, '${u.name}')" style="color:var(--danger); background:none; border:none; padding:4px;"><i data-lucide="trash-2" style="width:16px;"></i></button></td>` : '';
-                    tbody.innerHTML += `<tr><td>${img}</td><td style="vertical-align:middle; font-weight:600;">${u.name}</td>${action}</tr>`;
-                });
-                lucide.createIcons({ root: tbody });
-            }
+        const tr = document.createElement('tr');
+        const typeClass = log.type === 'เข้างาน' ? 'type-in' : (log.type === 'เลิกงาน' ? 'type-out' : '');
+        const mapLink = log.map_link ? `<a href="${log.map_link}" target="_blank" style="color:var(--primary); text-decoration: none;"><i data-lucide="map-pin" style="width: 16px; height: 16px;"></i> แผนที่</a>` : '-';
+        
+        let actionHtml = '';
+        if (role === 'superadmin') {
+          actionHtml = `<td class="print-hide action-cell">
+            <button class="btn btn-outline btn-sm" onclick="app.editLogRecord(${log.id}, '${log.log_time}', '${log.type}')"><i data-lucide="edit-2" style="width:14px; height:14px;"></i></button>
+            <button class="btn btn-outline btn-sm" style="color:var(--danger); border-color:#fecaca;" onclick="app.deleteLogRecord(${log.id})"><i data-lucide="trash-2" style="width:14px; height:14px;"></i></button>
+          </td>`;
         }
 
-    } catch(e) { console.error(e); }
-    document.getElementById('report-status').style.display = 'none';
-  },
+        tr.innerHTML = `
+          <td style="text-align: center; color: var(--text-muted); font-weight: 600;">${index + 1}</td>
+          <td style="font-weight: 500;">${this.formatThaiDate(log.log_date)}</td>
+          <td>${this.formatThaiTime(log.log_time)}</td>
+          <td style="font-weight: 600; color: #1e293b;">${log.name}</td>
+          <td class="${typeClass}">${log.type}</td>
+          <td>${mapLink}</td>
+          ${actionHtml}
+        `;
+        tbody.appendChild(tr);
+      });
+      lucide.createIcons({ root: tbody });
 
-  async deleteLog(id) {
-    if(confirm('ลบข้อมูลการลงเวลานี้?')) {
-        await this.supabase.from('attendance').delete().eq('id', id);
-        this.loadReportData();
-    }
-  },
-  async deleteUser(id, name) {
-    if(confirm(`ลบข้อมูลใบหน้าของ ${name}?`)) {
-        await this.supabase.from('users').delete().eq('id', id);
-        this.loadReportData();
-    }
-  },
-
-  showImageModal(imgUrl) {
-    const modal = document.getElementById('imageModal');
-    document.getElementById('modalFullImage').src = imgUrl; 
-    modal.style.display = 'flex'; setTimeout(() => modal.classList.add('active'), 10);
-  },
-
-  closeImageModal(e) {
-    if (e && e.target.id === 'imageModal' || (e && e.target.closest('.image-modal-close'))) {
-      const modal = document.getElementById('imageModal');
-      modal.classList.remove('active'); setTimeout(() => modal.style.display = 'none', 300);
+      Object.keys(this.calendarData).sort().forEach(name => {
+        const opt = document.createElement('option'); opt.value = name; opt.textContent = name; userSelect.appendChild(opt);
+      });
+      this.renderCalendar();
+    } catch(e) {
+      status.style.display = 'block';
+      this.setHtmlAndIcons('report-status', `<span style="color:var(--danger);"><i data-lucide="alert-circle"></i> Error: ${e.message}</span>`);
     }
   },
 
-  haversine(lat1, lon1, lat2, lon2) {
-    const R = 6371000; 
-    const dLat = (lat2-lat1)*Math.PI/180; 
-    const dLon = (lon2-lon1)*Math.PI/180;
-    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  async loadDailyReport() {
+    const tbody = document.getElementById('daily-tbody');
+    const status = document.getElementById('report-status');
+    const dateVal = document.getElementById('report-date').value;
+    const detailsInput = document.getElementById('daily-report-details');
+
+    if (!dateVal) return;
+    tbody.innerHTML = '';
+    if(detailsInput) detailsInput.value = ''; 
+    status.style.display = 'block';
+    this.setHtmlAndIcons('report-status', '<i data-lucide="loader-2" class="loader-dark" style="animation: spin 1.5s linear infinite;"></i> กำลังดึงข้อมูล...');
+
+    try {
+      const dArr = dateVal.split('-');
+      const dateKey = `${dArr[2]}/${dArr[1]}/${dArr[0]}`;
+
+      const [logsRes, reportsRes] = await Promise.all([
+        this.supabase.from('attendance').select('*').eq('log_date', dateKey),
+        this.supabase.from('daily_reports').select('details').eq('report_date', dateKey).maybeSingle()
+      ]);
+      
+      status.style.display = 'none';
+      if (detailsInput && reportsRes.data) detailsInput.value = reportsRes.data.details;
+      
+      const dailyLogs = logsRes.data || [];
+
+      if(dailyLogs.length === 0) {
+         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color: var(--text-muted); padding: 30px;">ไม่มีผู้บันทึกเวลาในวันนี้</td></tr>';
+         return;
+      }
+
+      let summaryData = {};
+      dailyLogs.forEach(log => {
+        if(!summaryData[log.name]) summaryData[log.name] = { in: '-', out: '-' };
+        if(log.type === 'เข้างาน') summaryData[log.name].in = log.log_time;
+        if(log.type === 'เลิกงาน') summaryData[log.name].out = log.log_time;
+      });
+
+      let seqIndex = 1;
+      for (const [name, times] of Object.entries(summaryData)) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="text-align: center; color: var(--text-muted); font-weight: 600;">${seqIndex++}</td>
+          <td style="font-weight: 600; color: #1e293b;">${name}</td>
+          <td class="${times.in !== '-' ? 'type-in' : ''}">${this.formatThaiTime(times.in)}</td>
+          <td class="${times.out !== '-' ? 'type-out' : ''}">${this.formatThaiTime(times.out)}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+    } catch(e) {
+      status.style.display = 'block';
+      this.setHtmlAndIcons('report-status', `<span style="color:var(--danger);"><i data-lucide="alert-circle"></i> Error: ${e.message}</span>`);
+    }
+  },
+
+  async saveDailyReport() {
+    const dateVal = document.getElementById('report-date').value;
+    const details = document.getElementById('daily-report-details').value.trim();
+    if (!dateVal) return Swal.fire('แจ้งเตือน', 'กรุณาเลือกวันที่ก่อนบันทึก', 'warning');
+
+    const dArr = dateVal.split('-');
+    const dateKey = `${dArr[2]}/${dArr[1]}/${dArr[0]}`;
+
+    try {
+      Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      const { error } = await this.supabase.from('daily_reports').upsert([{ report_date: dateKey, details: details }]);
+      if(error) throw error;
+      Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', showConfirmButton: false, timer: 1500 });
+    } catch (e) {
+      Swal.fire('ข้อผิดพลาด', e.message, 'error');
+    }
+  },
+
+  // ---------------------------------------------------------
+  // WORK HISTORY (ORIGINAL STYLE)
+  // ---------------------------------------------------------
+  initWorkHistory() {
+    const d = new Date();
+    const mEl = document.getElementById('history-month');
+    const yEl = document.getElementById('history-year');
+    if(!mEl.getAttribute('data-init')) {
+      mEl.value = d.getMonth() + 1; yEl.value = d.getFullYear(); mEl.setAttribute('data-init', 'true');
+    }
+    const searchInput = document.getElementById('history-search-keyword');
+    if (searchInput) searchInput.value = ''; 
+    document.getElementById('history-list-view').style.display = 'block';
+    document.getElementById('history-detail-view').style.display = 'none';
+    this.loadWorkHistory();
+  },
+
+  async loadWorkHistory() {
+    const month = document.getElementById('history-month').value;
+    const year = document.getElementById('history-year').value;
+    const status = document.getElementById('history-status');
+    const container = document.getElementById('history-cards-container');
+    const paginationContainer = document.getElementById('history-pagination-container');
+    
+    container.innerHTML = ''; paginationContainer.innerHTML = ''; status.style.display = 'flex'; 
+    this.setHtmlAndIcons('history-status', '<i data-lucide="loader-2" class="loader-dark" style="animation: spin 1.5s linear infinite; width: 36px; height: 36px; color: var(--primary);"></i><span>กำลังดึงข้อมูล...</span>');
+
+    const mm = String(month).padStart(2, '0');
+    const dateFilter = `%/${mm}/${year}`;
+
+    try {
+      const [logsRes, reportsRes] = await Promise.all([
+        this.supabase.from('attendance').select('*').like('log_date', dateFilter),
+        this.supabase.from('daily_reports').select('*').like('report_date', dateFilter)
+      ]);
+      
+      const logs = logsRes.data || [];
+      const reportsArr = reportsRes.data || [];
+
+      this.historyData = {};
+      logs.forEach(log => {
+        if(!this.historyData[log.log_date]) this.historyData[log.log_date] = { report: '', workers: {} };
+        if(!this.historyData[log.log_date].workers[log.name]) this.historyData[log.log_date].workers[log.name] = { in: '-', out: '-' };
+        if(log.type === 'เข้างาน') this.historyData[log.log_date].workers[log.name].in = log.log_time;
+        if(log.type === 'เลิกงาน') {
+            this.historyData[log.log_date].workers[log.name].out = log.log_time;
+            this.historyData[log.log_date].workers[log.name].empReport = log.emp_report || '';
+        }
+      });
+
+      reportsArr.forEach(r => {
+        if(!this.historyData[r.report_date]) this.historyData[r.report_date] = { report: '', workers: {} };
+        this.historyData[r.report_date].report = r.details;
+      });
+
+      status.style.display = 'none';
+
+      this.historySortedDates = Object.keys(this.historyData).sort((a, b) => {
+        const pa = a.split('/'); const pb = b.split('/');
+        const da = new Date(`${pa[2]}-${pa[1]}-${pa[0]}`); const db = new Date(`${pb[2]}-${pb[1]}-${pb[0]}`);
+        return db - da; 
+      });
+
+      this.historyCurrentPage = 1;
+      this.renderWorkHistoryList();
+
+    } catch(e) {
+      status.style.display = 'flex';
+      this.setHtmlAndIcons('history-status', `<span style="color:var(--danger);"><i data-lucide="alert-circle"></i> Error: ${e.message}</span>`);
+    }
+  },
+
+  onSearchInput() {
+    this.historyCurrentPage = 1;
+    this.renderWorkHistoryList();
+  },
+
+  renderWorkHistoryList() {
+    const container = document.getElementById('history-cards-container');
+    const paginationContainer = document.getElementById('history-pagination-container');
+    const rawKeyword = (document.getElementById('history-search-keyword').value || '').trim();
+    const keywords = rawKeyword.toLowerCase().split(/\s+/).filter(k => k.length > 0);
+
+    let filteredDates = this.historySortedDates;
+    
+    if (keywords.length > 0) {
+      filteredDates = this.historySortedDates.filter(dateStr => {
+        const dayData = this.historyData[dateStr];
+        const reportText = (dayData.report || '').toLowerCase();
+        const workerNames = Object.keys(dayData.workers).join(' ').toLowerCase();
+        const thaiDate = this.formatThaiDate(dateStr).toLowerCase();
+        const searchPool = `${thaiDate} ${reportText} ${workerNames}`;
+        return keywords.every(kw => searchPool.includes(kw));
+      });
+    }
+
+    const totalItems = filteredDates.length;
+    const totalPages = Math.ceil(totalItems / this.historyItemsPerPage) || 1;
+    if (this.historyCurrentPage > totalPages) this.historyCurrentPage = totalPages;
+    if (this.historyCurrentPage < 1) this.historyCurrentPage = 1;
+
+    const startIndex = (this.historyCurrentPage - 1) * this.historyItemsPerPage;
+    const endIndex = startIndex + this.historyItemsPerPage;
+    const paginatedDates = filteredDates.slice(startIndex, endIndex);
+
+    container.innerHTML = ''; paginationContainer.innerHTML = '';
+
+    if (paginatedDates.length === 0) {
+      container.innerHTML = '<div class="card-panel" style="text-align:center; color: var(--text-muted); padding: 40px; border-style: dashed; background: transparent; grid-column: 1 / -1;">ไม่พบข้อมูลที่ค้นหา</div>';
+      return;
+    }
+
+    paginatedDates.forEach(dateStr => {
+      const dayData = this.historyData[dateStr];
+      const workerCount = Object.keys(dayData.workers).length;
+      let snippet = dayData.report || 'ไม่มีรายละเอียดงานที่บันทึกไว้';
+      let displayDate = this.formatThaiDate(dateStr);
+
+      if (keywords.length > 0) {
+        snippet = this.highlightText(snippet, keywords);
+        displayDate = this.highlightText(displayDate, keywords);
+      } else if (!dayData.report) {
+        snippet = `<span style="color:#94a3b8; font-style:italic;">${snippet}</span>`;
+      }
+
+      const card = document.createElement('div');
+      card.className = 'card-panel';
+      card.style.cursor = 'pointer';
+      card.style.padding = '24px';
+      card.style.marginBottom = '0';
+      card.style.width = '100%';
+      card.style.boxSizing = 'border-box';
+      card.style.transition = 'all 0.2s ease';
+      card.onmouseover = () => { card.style.transform = 'translateY(-4px)'; card.style.borderColor = 'var(--primary)'; card.style.boxShadow = '0 12px 24px -4px rgba(79,70,229,0.15)'; };
+      card.onmouseout = () => { card.style.transform = 'translateY(0)'; card.style.borderColor = 'var(--border-color)'; card.style.boxShadow = '0 4px 12px -2px rgba(0,0,0,0.03)'; };
+      card.onclick = () => this.showHistoryDetail(dateStr);
+      
+      card.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div style="font-weight: 700; font-size: 1.15em; color: var(--primary); display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="calendar-days" style="width:20px;height:20px;"></i> ${displayDate}
+          </div>
+          <div style="background: rgba(16,185,129,0.15); color: #059669; padding: 6px 14px; border-radius: 20px; font-size: 0.9em; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+            <i data-lucide="users" style="width:16px;height:16px;"></i> ${workerCount} คน
+          </div>
+        </div>
+        <div style="color: var(--text-main); font-size: 0.95em; line-height: 1.6; background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+          ${snippet}
+        </div>
+      `;
+      container.appendChild(card);
+    });
+
+    if (totalPages > 1) {
+      let pagesHtml = '';
+      let startPage = Math.max(1, this.historyCurrentPage - 2);
+      let endPage = Math.min(totalPages, this.historyCurrentPage + 2);
+      if (endPage - startPage < 4) {
+        if (startPage === 1) endPage = Math.min(totalPages, startPage + 4);
+        else if (endPage === totalPages) startPage = Math.max(1, endPage - 4);
+      }
+
+      pagesHtml += `<button class="pagination-btn" onclick="app.goToHistoryPage(1)" ${this.historyCurrentPage === 1 ? 'disabled' : ''}><i data-lucide="chevrons-left" style="width: 16px; height: 16px;"></i> หน้าแรก</button>`;
+      pagesHtml += `<button class="pagination-btn" onclick="app.changeHistoryPage(-1)" ${this.historyCurrentPage === 1 ? 'disabled' : ''}><i data-lucide="chevron-left" style="width: 16px; height: 16px;"></i> ก่อนหน้า</button>`;
+
+      for (let i = startPage; i <= endPage; i++) {
+        const activeClass = i === this.historyCurrentPage ? 'active' : '';
+        pagesHtml += `<button class="pagination-btn ${activeClass}" onclick="app.goToHistoryPage(${i})">${i}</button>`;
+      }
+
+      pagesHtml += `<button class="pagination-btn" onclick="app.changeHistoryPage(1)" ${this.historyCurrentPage === totalPages ? 'disabled' : ''}>ถัดไป <i data-lucide="chevron-right" style="width: 16px; height: 16px;"></i></button>`;
+      pagesHtml += `<button class="pagination-btn" onclick="app.goToHistoryPage(${totalPages})" ${this.historyCurrentPage === totalPages ? 'disabled' : ''}>หน้าสุดท้าย <i data-lucide="chevrons-right" style="width: 16px; height: 16px;"></i></button>`;
+
+      paginationContainer.innerHTML = `<div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 32px; width: 100%; flex-wrap: wrap;">${pagesHtml}</div>`;
+    }
+    lucide.createIcons({ root: document.getElementById('history-list-view') });
+  },
+
+  changeHistoryPage(delta) { this.goToHistoryPage(this.historyCurrentPage + delta); },
+  goToHistoryPage(page) {
+    this.historyCurrentPage = page; this.renderWorkHistoryList();
+    const listTop = document.getElementById('history-list-view').getBoundingClientRect().top + window.scrollY - 80;
+    window.scrollTo({ top: listTop, behavior: 'smooth' });
+  },
+
+  showHistoryDetail(dateStr) {
+    document.getElementById('history-list-view').style.display = 'none';
+    document.getElementById('history-detail-view').style.display = 'block';
+    
+    let thaiDate = this.formatThaiDate(dateStr);
+    let reportText = this.historyData[dateStr].report || 'ไม่มีรายละเอียดการทำงานบันทึกไว้ในระบบ';
+
+    this.setHtmlAndIcons('history-detail-title', `<i data-lucide="calendar" style="width:28px;height:28px;"></i> ประจำวันที่ ${thaiDate}`);
+    
+    const dayData = this.historyData[dateStr];
+    const detailTextEl = document.getElementById('history-detail-text');
+    detailTextEl.innerHTML = reportText; 
+    
+    if(dayData.report) {
+      detailTextEl.style.color = 'var(--text-main)'; detailTextEl.style.fontStyle = 'normal';
+    } else {
+      detailTextEl.style.color = 'var(--text-muted)'; detailTextEl.style.fontStyle = 'italic';
+    }
+
+    const tbody = document.getElementById('history-detail-tbody');
+    tbody.innerHTML = '';
+    
+    const workers = Object.keys(dayData.workers);
+    if(workers.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color: var(--text-muted); padding: 30px;">ไม่มีผู้ปฏิบัติงานในวันนี้</td></tr>';
+    } else {
+      workers.forEach((name, index) => {
+        const times = dayData.workers[name];
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="text-align: center; color: var(--text-muted); font-weight: 600;">${index + 1}</td>
+          <td style="font-weight: 600; color: #1e293b; font-size: 1.05em;">${name}</td>
+          <td class="${times.in !== '-' ? 'type-in' : ''}">${this.formatThaiTime(times.in)}</td>
+          <td class="${times.out !== '-' ? 'type-out' : ''}">${this.formatThaiTime(times.out)}</td>
+        `;
+        tbody.appendChild(tr);
+
+        if (times.empReport && times.empReport.trim() !== '') {
+          const trReport = document.createElement('tr');
+          trReport.innerHTML = `
+            <td colspan="4" style="padding: 10px 16px; background: #f8fafc; font-size: 0.95em; color: var(--text-muted); border-top: none;">
+              <span style="font-weight: 600; color: var(--primary);">📝 ผลปฏิบัติงาน:</span> <span style="white-space: pre-wrap;">${times.empReport}</span>
+            </td>
+          `;
+          tbody.appendChild(trReport);
+        }
+      });
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' }); 
+  },
+
+  closeHistoryDetail() {
+    document.getElementById('history-list-view').style.display = 'block';
+    document.getElementById('history-detail-view').style.display = 'none';
+  },
+
+  // ---------------------------------------------------------
+  // SUPERADMIN CRUD
+  // ---------------------------------------------------------
+  async editUserRecord(oldName) {
+    const { value: newName } = await Swal.fire({
+      title: 'แก้ไขชื่อพนักงาน', input: 'text', inputValue: oldName,
+      showCancelButton: true, confirmButtonText: 'บันทึกการแก้ไข', cancelButtonText: 'ยกเลิก',
+      inputValidator: (value) => { if (!value) return 'ชื่อพนักงานห้ามเว้นว่าง!' }
+    });
+
+    if (newName && newName !== oldName) {
+      try {
+        Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        const { error: err1 } = await this.supabase.from('users').update({ name: newName }).eq('name', oldName);
+        if(err1) throw err1;
+        const { error: err2 } = await this.supabase.from('attendance').update({ name: newName }).eq('name', oldName);
+        if(err2) throw err2;
+
+        await Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'แก้ไขชื่อพนักงานเรียบร้อยแล้ว', timer: 1500 });
+        this.loadEmployeeData(); 
+      } catch(e) { Swal.fire('ข้อผิดพลาด', e.message, 'error'); }
+    }
+  },
+
+  async deleteUserRecord(name) {
+    if (await Swal.fire({title: `ยืนยันการลบ ${name}?`, text: "ลบข้อมูลใบหน้าถาวร", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'ใช่, ลบทันที'}).then(r => r.isConfirmed)) {
+      try {
+        Swal.fire({ title: 'กำลังลบ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        const { error } = await this.supabase.from('users').delete().eq('name', name);
+        if (error) throw error;
+        await Swal.fire({ icon: 'success', title: 'ลบสำเร็จ', timer: 1500 });
+        this.loadEmployeeData(); 
+      } catch(e) { Swal.fire('ข้อผิดพลาด', e.message, 'error'); }
+    }
+  },
+
+  async editLogRecord(id, oldTime, oldType) {
+    let defaultTime = oldTime.replace(' น.', '').trim();
+    if(defaultTime === '-' || defaultTime === '') defaultTime = '08:00:00';
+    if(defaultTime.length === 5) defaultTime += ':00';
+
+    const { value: formValues } = await Swal.fire({
+      title: 'แก้ไขข้อมูลลงเวลา',
+      html:
+        `<select id="swal-type" class="swal2-input" style="display:flex; width:80%; margin:10px auto;"><option value="เข้างาน" ${oldType === 'เข้างาน' ? 'selected' : ''}>เข้างาน</option><option value="เลิกงาน" ${oldType === 'เลิกงาน' ? 'selected' : ''}>เลิกงาน</option></select>
+         <input id="swal-time" type="time" step="1" class="swal2-input" value="${defaultTime}" style="display:flex; width:80%; margin:10px auto;">`,
+      focusConfirm: false, showCancelButton: true, confirmButtonText: 'บันทึกการแก้ไข',
+      preConfirm: () => [document.getElementById('swal-type').value, document.getElementById('swal-time').value]
+    });
+
+    if (formValues) {
+      try {
+        Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        const { error } = await this.supabase.from('attendance').update({ type: formValues[0], log_time: formValues[1] }).eq('id', id);
+        if(error) throw error;
+        await Swal.fire({ icon: 'success', title: 'สำเร็จ', timer: 1500 });
+        this.loadReportData(); 
+      } catch(e) { Swal.fire('ข้อผิดพลาด', e.message, 'error'); }
+    }
+  },
+
+  async deleteLogRecord(id) {
+    if (await Swal.fire({title: `ยืนยันการลบ?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'ใช่, ลบทันที'}).then(r=>r.isConfirmed)) {
+      try {
+        Swal.fire({ title: 'กำลังลบ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        const { error } = await this.supabase.from('attendance').delete().eq('id', id);
+        if (error) throw error;
+        await Swal.fire({ icon: 'success', title: 'ลบสำเร็จ', timer: 1500 });
+        this.loadReportData(); 
+      } catch(e) { Swal.fire('ข้อผิดพลาด', e.message, 'error'); }
+    }
+  },
+
+  renderCalendar() {
+    const area = document.getElementById('calendar-render-area');
+    const userSelect = document.getElementById('summary-user-select');
+    const detailDiv = document.getElementById('cal-day-detail');
+    if(detailDiv) detailDiv.style.display = 'none';
+    
+    if(!userSelect.value || !this.calendarData[userSelect.value]) { area.innerHTML = '<div style="text-align:center; padding: 40px;">ไม่มีข้อมูล</div>'; return; }
+
+    const userData = this.calendarData[userSelect.value];
+    const month = parseInt(document.getElementById('report-month').value, 10);
+    const year = parseInt(document.getElementById('report-year').value, 10);
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const firstDayIndex = new Date(year, month - 1, 1).getDay(); 
+    
+    let html = `<div class="calendar-header"><div style="color: #ef4444;">อา.</div><div>จ.</div><div>อ.</div><div>พ.</div><div>พฤ.</div><div>ศ.</div><div style="color: var(--primary);">ส.</div></div><div class="calendar-grid">`;
+    for(let i = 0; i < firstDayIndex; i++) html += `<div class="cal-day empty"></div>`;
+    
+    for(let d = 1; d <= daysInMonth; d++) {
+      let statusClass = 'absent';
+      if(userData[d]) {
+        if(userData[d].in && userData[d].out) statusClass = 'in-out'; 
+        else if(userData[d].in || userData[d].out) statusClass = 'in-only'; 
+      }
+      html += `<div class="cal-day ${statusClass}" id="cal-day-${d}" onclick="app.showDayDetail(${d})">${d}</div>`;
+    }
+    
+    html += `</div><div class="cal-legend"><div class="legend-item"><div class="legend-dot dot-green"></div> เข้าและเลิกงาน</div><div class="legend-item"><div class="legend-dot dot-orange"></div> เข้าอย่างเดียว (ไม่ครบ)</div><div class="legend-item"><div class="legend-dot dot-gray"></div> ขาด/ไม่มีบันทึก</div></div>`;
+    area.innerHTML = html;
+  },
+
+  showDayDetail(day) {
+    const username = document.getElementById('summary-user-select').value;
+    const detailDiv = document.getElementById('cal-day-detail');
+    if(!username || !this.calendarData[username]) return;
+
+    document.querySelectorAll('.cal-day').forEach(el => el.classList.remove('selected-day'));
+    const selectedEl = document.getElementById('cal-day-' + day);
+    if(selectedEl) selectedEl.classList.add('selected-day');
+
+    const data = this.calendarData[username][day];
+    const monthSelect = document.getElementById('report-month');
+    const monthStr = monthSelect.options[monthSelect.selectedIndex].text;
+    const yearStr = parseInt(document.getElementById('report-year').value) + 543;
+    const fullDateStr = `วันที่ ${day} ${monthStr} ${yearStr}`;
+
+    if(!data) {
+      detailDiv.innerHTML = `<div style="font-weight: 700; margin-bottom: 12px; font-size: 1.1em; color: var(--text-muted); display: flex; align-items: center; justify-content: center; gap: 8px;"><i data-lucide="calendar" style="width: 20px; height: 20px;"></i> ${fullDateStr}</div><div style="color: var(--text-muted); font-size: 1em; text-align: center; padding: 16px 0;">ไม่มีบันทึกการทำงานในระบบ</div>`;
+    } else {
+      const inTimeStr = data.timeIn !== '-' ? data.timeIn : '<span style="color:var(--text-muted)">-</span>';
+      const outTimeStr = data.timeOut !== '-' ? data.timeOut : '<span style="color:var(--text-muted)">-</span>';
+      
+      let reportHtml = '';
+      if (data.empReport && data.empReport.trim() !== '') {
+        reportHtml = `<div style="margin-top: 16px; background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); text-align: left;"><div style="font-weight: 600; color: var(--primary); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;"><i data-lucide="file-text" style="width: 18px; height: 18px;"></i> รายงานผลปฏิบัติงาน:</div><div style="color: var(--text-main); font-size: 0.95em; white-space: pre-wrap; line-height: 1.6;">${data.empReport}</div></div>`;
+      }
+
+      detailDiv.innerHTML = `
+        <div style="font-weight: 700; margin-bottom: 20px; font-size: 1.15em; color: var(--primary); text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px;"><i data-lucide="calendar" style="width: 22px; height: 22px;"></i> ${fullDateStr}</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 1em; text-align: center;">
+          <div style="background: rgba(16,185,129,0.05); padding: 20px; border-radius: 12px; border: 1px solid rgba(16,185,129,0.2);"><div style="color: var(--success); font-size: 0.9em; margin-bottom: 8px; font-weight: 700; display: flex; justify-content: center; align-items: center; gap: 6px;"><i data-lucide="log-in" style="width: 18px; height: 18px;"></i> เข้างาน</div><div style="font-weight: 700; color: #0f172a; font-size: 1.25em;">${inTimeStr}</div></div>
+          <div style="background: rgba(245,158,11,0.05); padding: 20px; border-radius: 12px; border: 1px solid rgba(245,158,11,0.2);"><div style="color: var(--warning); font-size: 0.9em; margin-bottom: 8px; font-weight: 700; display: flex; justify-content: center; align-items: center; gap: 6px;"><i data-lucide="log-out" style="width: 18px; height: 18px;"></i> เลิกงาน</div><div style="font-weight: 700; color: #0f172a; font-size: 1.25em;">${outTimeStr}</div></div>
+        </div>
+        ${reportHtml}
+      `;
+    }
+    lucide.createIcons({ root: detailDiv });
+    detailDiv.style.display = 'block';
   }
 };
 

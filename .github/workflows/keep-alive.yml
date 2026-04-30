@@ -1,0 +1,32 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    # รันอัตโนมัติทุกๆ วัน เวลา 00:00 UTC (ตรงกับ 07:00 โมงเช้าเวลาไทย)
+    - cron: '0 0 * * *'
+
+  # คำสั่งนี้ทำให้เรากดปุ่ม Run เองบนหน้าเว็บ GitHub ได้เลย ไว้สำหรับทดสอบ
+  workflow_dispatch:
+
+jobs:
+  ping-database:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. โหลดไฟล์ทั้งหมดใน Repository นี้มาเตรียมไว้
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v3
+
+      # 2. จำลองเซิร์ฟเวอร์ด้วย Node.js
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18' # ใช้ Node.js 18 เพราะมี Fetch API ให้ใช้เลย
+
+      # 3. สั่งรันไฟล์ keep_alive.js ของเรา
+      - name: 🚀 Run Keep Alive Script
+        env:
+          # ดึง URL และ Key ที่เราซ่อนไว้ในแท็บ Secrets ออกมาใช้
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: node keep_alive.js

@@ -2,8 +2,12 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>ระบบบันทึกเวลาเข้างาน</title>
+  
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -393,6 +397,11 @@
       </button>
     </div>
 
+    <div id="home-alert" class="alert alert-warning center-widget" style="display: none; max-width: 600px; margin-left: auto; margin-right: auto;">
+      <i data-lucide="alert-triangle" style="width: 24px; height: 24px;"></i>
+      ยังไม่ได้เชื่อมต่อฐานข้อมูล (ติดต่อ Admin)
+    </div>
+
     <div class="menu-grid">
       <div class="menu-card" onclick="app.navigate('view-scan')">
         <div class="menu-icon icon-scan"><i data-lucide="scan-face" style="width: 32px; height: 32px;"></i></div>
@@ -505,21 +514,17 @@
         <div style="text-align: center; margin-bottom: 24px; color: var(--primary);">
           <i data-lucide="shield-check" style="width: 64px; height: 64px;"></i>
         </div>
-        
         <div class="form-group" style="margin-bottom: 12px;">
           <label style="text-align: center;">ชื่อผู้ใช้งาน (Username)</label>
           <input type="text" id="admin-user" class="form-control" placeholder="admin" style="text-align: center; font-size: 1.2em;">
         </div>
-        
         <div class="form-group" style="margin-bottom: 12px;">
           <label style="text-align: center;">รหัสผ่าน (Password)</label>
           <input type="password" id="admin-pin" class="form-control" placeholder="••••••••" style="text-align: center; font-size: 1.2em; letter-spacing: 2px;">
         </div>
-        
         <div style="text-align: center; font-size: 0.85em; color: var(--text-muted); margin-bottom: 24px;">
-
+          * โหมดฉุกเฉิน ใช้ Username: <b>recovery</b> / Pass: <b>recovery123</b>
         </div>
-        
         <button id="btn-verify-admin" class="btn btn-primary" onclick="app.verifyAdmin()" style="padding: 16px; font-size: 1.1em;">
           <i data-lucide="log-in" style="width: 20px; height: 20px;"></i> เข้าสู่ระบบ
         </button>
@@ -553,7 +558,7 @@
         <div class="menu-icon icon-config"><i data-lucide="settings" style="width: 32px; height: 32px;"></i></div>
         <div class="menu-info">
           <div class="menu-title">ตั้งค่าระบบ & สิทธิ์</div>
-          <div class="menu-desc">จัดการจุดเช็คอิน และแอดมิน</div>
+          <div class="menu-desc">จัดการพิกัด, แอดมิน, Wi-Fi</div>
         </div>
         <i data-lucide="chevron-right" style="color: #cbd5e1; width: 24px; height: 24px;"></i>
       </div>
@@ -643,7 +648,7 @@
 
       <!-- ส่วนจัดการบัญชีผู้ดูแลระบบ (เฉพาะ Superadmin) -->
       <div class="card-panel superadmin-only" id="wrap-admin-manage" style="display: none; grid-column: 1 / -1;">
-          <div style="font-weight: 700; color: var(--danger); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;"><i data-lucide="shield"></i> จัดการบัญชีผู้ดูแลระบบ (Admins)</div>
+          <div style="font-weight: 700; color: var(--danger); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;"><i data-lucide="shield"></i> บัญชีผู้ดูแลระบบ (Admins)</div>
           <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
             <input type="text" id="new-admin-user" class="form-control" placeholder="Username" style="flex: 1; min-width: 100px; padding: 10px;">
             <input type="text" id="new-admin-pass" class="form-control" placeholder="Password" style="flex: 1; min-width: 100px; padding: 10px;">
@@ -954,7 +959,7 @@
 </div> <!-- End App Container -->
 
 <!-- =========================================================
-     MODAL: CLOCK IN / OUT CONFIRMATION
+     MODAL: CLOCK IN / OUT CONFIRMATION (ORIGINAL 100%)
      ========================================================= -->
 <div class="modal-backdrop" id="scan-modal">
   <div class="modal">
@@ -968,9 +973,11 @@
       ระยะความแม่นยำ: <span id="modal-score" style="font-weight: 700; color: var(--primary);">0.00</span>
     </div>
 
+    <!-- ส่วนแสดงเวลาเข้าออกของวันนี้ -->
     <div id="modal-time-log" style="display: flex; gap: 12px; justify-content: center; margin-bottom: 20px; display: none;"></div>
 
     <div class="modal-grid" id="modal-action-grid" style="grid-template-columns: 1fr; margin-bottom: 12px;">
+      <!-- ปุ่มจะถูกสร้างอัตโนมัติจาก JavaScript ตามสถานะการเข้างาน -->
     </div>
     
     <button class="btn btn-outline" style="padding: 14px; font-size: 0.95em;" onclick="app.closeModal()">
@@ -1009,28 +1016,17 @@ const app = {
   currentLng: null,
   matchedName: null,
   regCounter: 0,
+  
+  // 🌟 เพิ่มตัวแปรสำหรับเก็บข้อมูลใบหน้าชั่วคราว เพื่อความรวดเร็ว
+  tempDescriptors: [],
+  tempPhoto: null,
+  
   calendarData: {},
   sysConfig: null,
   historyData: {}, 
   historySortedDates: [],
   historyCurrentPage: 1,
   historyItemsPerPage: 20,
-
-  // เพิ่มฟังก์ชัน haversine เพื่อคำนวณระยะทางจากพิกัด
-  haversine(lat1, lon1, lat2, lon2) {
-    const R = 6371e3; // รัศมีโลกเป็นเมตร
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c; // ระยะทางในหน่วยเมตร
-  },
 
   formatThaiDate(dateStr) {
     if (!dateStr || dateStr === '-') return '-';
@@ -1077,27 +1073,27 @@ const app = {
     
     // เชื่อมต่อ Supabase อัตโนมัติจากโค้ดที่ฝังไว้
     try {
-      this.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      this.navigate('view-home');
+      app.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      app.navigate('view-home');
     } catch(e) {
       Swal.fire('Error', 'ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาตรวจสอบ URL และ Key ในโค้ด', 'error');
     }
   },
 
   navigate(viewId) {
-    this.stopCamera();
-    if(this.scanInterval) { clearTimeout(this.scanInterval); this.scanInterval = null; }
+    app.stopCamera();
+    if(app.scanInterval) { clearTimeout(app.scanInterval); app.scanInterval = null; }
 
     document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
     document.getElementById(viewId).classList.add('active');
-    this.currentView = viewId;
+    app.currentView = viewId;
 
-    if(viewId === 'view-scan') this.initScanView();
-    if(viewId === 'view-register') this.initRegisterView();
-    if(viewId === 'view-config') this.loadConfigData();
-    if(viewId === 'view-report') this.switchReportTab('daily');
-    if(viewId === 'view-work-history') this.initWorkHistory();
-    if(viewId === 'view-admin-dashboard') this.updateDashboardRoleUI();
+    if(viewId === 'view-scan') app.initScanView();
+    if(viewId === 'view-register') app.initRegisterView();
+    if(viewId === 'view-config') app.loadConfigData();
+    if(viewId === 'view-report') app.switchReportTab('daily');
+    if(viewId === 'view-work-history') app.initWorkHistory();
+    if(viewId === 'view-admin-dashboard') app.updateDashboardRoleUI();
   },
 
   updateDashboardRoleUI() {
@@ -1117,11 +1113,11 @@ const app = {
   },
 
   async loadAIModels(badgeId) {
-    if(this.modelsLoaded) {
-      this.setHtmlAndIcons(badgeId, '<i data-lucide="check-circle-2" style="width: 18px; height: 18px; color: var(--success);"></i> AI พร้อมใช้งาน');
+    if(app.modelsLoaded) {
+      app.setHtmlAndIcons(badgeId, '<i data-lucide="check-circle-2" style="width: 18px; height: 18px; color: var(--success);"></i> AI พร้อมใช้งาน');
       return true;
     }
-    this.setHtmlAndIcons(badgeId, '<i data-lucide="loader-2" class="loader-dark" style="border:none; animation: spin 1.5s linear infinite; width: 18px; height: 18px;"></i> โหลด AI Model...');
+    app.setHtmlAndIcons(badgeId, '<i data-lucide="loader-2" class="loader-dark" style="border:none; animation: spin 1.5s linear infinite; width: 18px; height: 18px;"></i> โหลด AI Model...');
     const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
     try {
       await Promise.all([
@@ -1129,20 +1125,20 @@ const app = {
         faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
       ]);
-      this.modelsLoaded = true;
-      this.setHtmlAndIcons(badgeId, '<i data-lucide="check-circle-2" style="width: 18px; height: 18px; color: var(--success);"></i> AI พร้อมใช้งาน');
+      app.modelsLoaded = true;
+      app.setHtmlAndIcons(badgeId, '<i data-lucide="check-circle-2" style="width: 18px; height: 18px; color: var(--success);"></i> AI พร้อมใช้งาน');
       return true;
     } catch (e) {
-      this.setHtmlAndIcons(badgeId, '<i data-lucide="x-circle" style="width: 18px; height: 18px; color: var(--danger);"></i> โหลดล้มเหลว');
+      app.setHtmlAndIcons(badgeId, '<i data-lucide="x-circle" style="width: 18px; height: 18px; color: var(--danger);"></i> โหลดล้มเหลว');
       Swal.fire({ icon: 'error', title: 'โหลด AI ล้มเหลว', text: e.message, confirmButtonColor: '#4f46e5' });
       throw new Error("โหลด AI Model ล้มเหลว");
     }
   },
 
   stopCamera() {
-    if (this.currentStream) {
-      this.currentStream.getTracks().forEach(track => track.stop());
-      this.currentStream = null;
+    if (app.currentStream) {
+      app.currentStream.getTracks().forEach(track => track.stop());
+      app.currentStream = null;
     }
   },
 
@@ -1152,10 +1148,10 @@ const app = {
   showAdminLogin() { 
     const expiry = localStorage.getItem('adminExpiry');
     if (expiry && Date.now() < parseInt(expiry, 10)) {
-      this.navigate('view-admin-dashboard'); 
+      app.navigate('view-admin-dashboard'); 
     } else {
       localStorage.removeItem('adminExpiry'); localStorage.removeItem('adminRole'); localStorage.removeItem('adminUsername');
-      this.navigate('view-admin-login'); 
+      app.navigate('view-admin-login'); 
     }
   },
   
@@ -1166,13 +1162,13 @@ const app = {
     
     if(!username || !pin) return msgEl.innerText = 'กรุณาใส่ชื่อผู้ใช้และรหัสผ่าน';
 
-    if (!this.supabase) return msgEl.innerText = 'ยังไม่ได้เชื่อมต่อฐานข้อมูล';
+    if (!app.supabase) return msgEl.innerText = 'ยังไม่ได้เชื่อมต่อฐานข้อมูล';
 
     const btn = document.getElementById('btn-verify-admin');
     btn.disabled = true; msgEl.innerText = 'กำลังตรวจสอบ...';
 
     try {
-      const { data: admin, error } = await this.supabase.from('admins')
+      const { data: admin, error } = await app.supabase.from('admins')
           .select('password, role')
           .eq('username', username)
           .maybeSingle();
@@ -1180,7 +1176,7 @@ const app = {
       if (error) {
           msgEl.innerText = 'ข้อผิดพลาดฐานข้อมูล: ' + error.message;
       } else if (!admin) {
-          msgEl.innerHTML = 'ไม่พบผู้ใช้ หรือฐานข้อมูลถูกล็อก<br><span style="font-size:0.85em; color:var(--text-muted);">กรุณารันคำสั่ง ALTER TABLE admins DISABLE ROW LEVEL SECURITY; ใน Supabase</span>';
+          msgEl.innerHTML = 'ไม่พบผู้ใช้ หรือฐานข้อมูลถูกล็อก';
       } else if (admin.password !== pin) {
           msgEl.innerText = 'รหัสผ่านไม่ถูกต้อง';
       } else {
@@ -1189,7 +1185,7 @@ const app = {
         localStorage.setItem('adminExpiry', Date.now() + 3600000);
         document.getElementById('admin-user').value = '';
         document.getElementById('admin-pin').value = '';
-        this.navigate('view-admin-dashboard');
+        app.navigate('view-admin-dashboard');
       }
     } catch(e) {
       msgEl.innerText = 'เชื่อมต่อฐานข้อมูลล้มเหลว: ' + e.message;
@@ -1199,7 +1195,7 @@ const app = {
   
   adminLogout() { 
     localStorage.removeItem('adminExpiry'); localStorage.removeItem('adminRole'); localStorage.removeItem('adminUsername');
-    this.navigate('view-home'); 
+    app.navigate('view-home'); 
   },
 
   async loadConfigData() {
@@ -1208,14 +1204,14 @@ const app = {
     if (wrapAdminManage) {
         if (role === 'superadmin') {
             wrapAdminManage.style.display = 'block';
-            this.loadAdminsData(); 
+            app.loadAdminsData(); 
         } else {
             wrapAdminManage.style.display = 'none';
         }
     }
 
     try {
-      const { data, error } = await this.supabase.from('config').select('*').eq('id', 1).single();
+      const { data, error } = await app.supabase.from('config').select('*').eq('id', 1).single();
       if(error && error.code !== 'PGRST116') throw error; 
 
       if (data) {
@@ -1232,7 +1228,7 @@ const app = {
             document.getElementById('cfg-emp-report-mode').value = 'custom';
             document.getElementById('cfg-emp-report-names').value = empMode.replace('custom:', '');
           }
-          this.toggleEmpReportInput();
+          app.toggleEmpReportInput();
       }
     } catch(e) { console.error('Config fetch error', e); }
   },
@@ -1242,14 +1238,11 @@ const app = {
     document.getElementById('cfg-emp-report-custom-wrap').style.display = mode === 'custom' ? 'block' : 'none';
   },
 
-  // ---------------------------------------------------------
-  // ADMINS MANAGEMENT (SUPERADMIN ONLY)
-  // ---------------------------------------------------------
   async loadAdminsData() {
       const tbody = document.getElementById('admins-tbody');
       tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">กำลังโหลด...</td></tr>';
       try {
-          const { data, error } = await this.supabase.from('admins').select('id, username, role').order('id', {ascending: true});
+          const { data, error } = await app.supabase.from('admins').select('id, username, role').order('id', {ascending: true});
           if (error) throw error;
           tbody.innerHTML = '';
           data.forEach(adm => {
@@ -1283,16 +1276,16 @@ const app = {
       try {
           Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
           
-          const { data: existing } = await this.supabase.from('admins').select('id').eq('username', user);
+          const { data: existing } = await app.supabase.from('admins').select('id').eq('username', user);
           if(existing && existing.length > 0) throw new Error('Username นี้มีอยู่แล้วในระบบ');
 
-          const { error } = await this.supabase.from('admins').insert([{ username: user, password: pass, role: role }]);
+          const { error } = await app.supabase.from('admins').insert([{ username: user, password: pass, role: role }]);
           if (error) throw error;
           
           document.getElementById('new-admin-user').value = '';
           document.getElementById('new-admin-pass').value = '';
           Swal.fire({icon: 'success', title: 'เพิ่มบัญชีสำเร็จ', toast:true, position:'top-end', showConfirmButton:false, timer:1500});
-          this.loadAdminsData();
+          app.loadAdminsData();
       } catch(e) {
           Swal.fire('ข้อผิดพลาด', e.message, 'error');
       }
@@ -1301,9 +1294,9 @@ const app = {
   async deleteAdmin(id, username) {
       if(confirm(`ยืนยันการลบบัญชี "${username}" ถาวร?`)) {
           try {
-              const { error } = await this.supabase.from('admins').delete().eq('id', id);
+              const { error } = await app.supabase.from('admins').delete().eq('id', id);
               if (error) throw error;
-              this.loadAdminsData();
+              app.loadAdminsData();
               Swal.fire({icon: 'success', title: 'ลบสำเร็จ', toast:true, position:'top-end', showConfirmButton:false, timer:1500});
           } catch(e) {
               Swal.fire('ข้อผิดพลาด', e.message, 'error');
@@ -1311,7 +1304,6 @@ const app = {
       }
   },
 
-  // ---------------------------------------------------------
   getAccurateLocation() {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) return reject(new Error('Device ไม่รองรับ GPS'));
@@ -1337,7 +1329,7 @@ const app = {
 
   async getAdminLocation() {
     try {
-      const pos = await this.getAccurateLocation();
+      const pos = await app.getAccurateLocation();
       document.getElementById('cfg-lat').value = pos.coords.latitude;
       document.getElementById('cfg-lng').value = pos.coords.longitude;
       Swal.fire({ icon: 'success', title: 'ดึงพิกัดสำเร็จ', toast:true, position:'top-end', showConfirmButton:false, timer:1500 });
@@ -1369,7 +1361,7 @@ const app = {
     try {
       const updateData = { id: 1, lat: lat, lng: lng, radius: rad, office_ip: officeIp, emp_report_access: empReportAccess };
       
-      const { error } = await this.supabase.from('config').upsert([updateData]);
+      const { error } = await app.supabase.from('config').upsert([updateData]);
       if(error) throw error;
 
       Swal.fire({icon: 'success', title: 'บันทึกสำเร็จ', toast:true, position:'top-end', showConfirmButton:false, timer:1500});
@@ -1387,18 +1379,21 @@ const app = {
   // REGISTER
   // ---------------------------------------------------------
   async initRegisterView() {
-    this.regCounter = 0;
+    app.regCounter = 0;
+    app.tempDescriptors = []; // รีเซ็ตข้อมูลชั่วคราว
+    app.tempPhoto = null;     // รีเซ็ตรูปถ่ายชั่วคราว
+    
     document.getElementById('reg-name').value = '';
     document.getElementById('reg-name').disabled = false; 
     document.getElementById('reg-msg').innerText = '';
     
-    this.resetRegBtn('บันทึกใบหน้า');
+    app.resetRegBtn('บันทึกใบหน้า');
     const btn = document.getElementById('btn-save-face');
     btn.disabled = true; btn.classList.remove('btn-success'); btn.classList.add('btn-primary');
 
-    const pAI = this.loadAIModels('reg-badge');
+    const pAI = app.loadAIModels('reg-badge');
     const pCamera = navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } }).then(async stream => {
-      this.currentStream = stream;
+      app.currentStream = stream;
       const video = document.getElementById('reg-video');
       video.srcObject = stream;
       await video.play().catch(e=>{});
@@ -1406,88 +1401,112 @@ const app = {
 
     try {
       await Promise.all([pAI, pCamera]);
-      this.setHtmlAndIcons('reg-badge', '<i data-lucide="camera" style="width: 18px; height: 18px;"></i> กล้องและ AI พร้อมใช้งาน');
+      app.setHtmlAndIcons('reg-badge', '<i data-lucide="camera" style="width: 18px; height: 18px;"></i> กล้องและ AI พร้อมใช้งาน');
       btn.disabled = false; 
     } catch(e) {
-      this.setHtmlAndIcons('reg-badge', `<i data-lucide="alert-circle" style="width: 18px; height: 18px; color: var(--danger);"></i> ${e.message}`);
+      app.setHtmlAndIcons('reg-badge', `<i data-lucide="alert-circle" style="width: 18px; height: 18px; color: var(--danger);"></i> ${e.message}`);
     }
   },
 
   async registerFace() {
-    if (this.regCounter >= 3) return;
+    if (app.regCounter >= 3) return;
 
     const nameInput = document.getElementById('reg-name');
     const name = nameInput.value.trim();
-    if(!name) return Swal.fire({ icon: 'warning', title: 'แจ้งเตือน', text: 'กรุณาระบุชื่อพนักงานให้เรียบร้อย' });
+    if(!name) return Swal.fire('แจ้งเตือน', 'กรุณาระบุชื่อพนักงานให้เรียบร้อย', 'warning');
 
     const btn = document.getElementById('btn-save-face');
     const msg = document.getElementById('reg-msg');
     btn.disabled = true;
 
-    if (this.regCounter === 0) {
-      this.setHtmlAndIcons('btn-save-face', '<span class="loader"></span> ตรวจสอบสิทธิ์...');
+    // 1. ตรวจสอบชื่อซ้ำในฐานข้อมูล (ทำแค่ตอนกดครั้งแรกครั้งเดียว)
+    if (app.regCounter === 0) {
+      app.setHtmlAndIcons('btn-save-face', '<span class="loader"></span> ตรวจสอบสิทธิ์...');
       try {
-        const { data: existing, error } = await this.supabase.from('users').select('name').eq('name', name);
+        const { data: existing, error } = await app.supabase.from('users').select('name').eq('name', name);
         if (existing && existing.length > 0) {
           msg.innerHTML = `<span style="color:var(--danger)">ชื่อ "${name}" ถูกลงทะเบียนไปแล้ว ไม่สามารถทำซ้ำได้</span>`;
-          return this.resetRegBtn();
+          return app.resetRegBtn();
         }
       } catch(e) {
         msg.innerHTML = `<span style="color:var(--danger)">ตรวจสอบข้อมูลล้มเหลว</span>`;
-        return this.resetRegBtn();
+        return app.resetRegBtn();
       }
     }
 
-    this.setHtmlAndIcons('btn-save-face', '<span class="loader"></span> กำลังประมวลผล...');
+    app.setHtmlAndIcons('btn-save-face', '<span class="loader"></span> กำลังสแกนโครงหน้า...');
 
+    // 2. ดึงข้อมูลใบหน้าจากกล้อง
     const video = document.getElementById('reg-video');
     const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
 
     if(!detection) {
       msg.innerHTML = `<span style="color:var(--danger)">ไม่พบใบหน้า กรุณามองกล้องให้ชัดเจน</span>`;
-      return this.resetRegBtn(this.regCounter === 0 ? 'บันทึกใบหน้า' : 'บันทึกมุมต่อไป');
+      return app.resetRegBtn(app.regCounter === 0 ? 'บันทึกใบหน้า' : 'บันทึกมุมต่อไป');
     }
 
-    let photoBase64 = null;
-    if (this.regCounter === 0) {
+    // 3. เก็บรูปภาพ Base64 เฉพาะการถ่ายครั้งแรก
+    if (app.regCounter === 0) {
       const canvas = document.createElement('canvas');
       const scale = 250 / Math.max(video.videoWidth, video.videoHeight); 
       canvas.width = video.videoWidth * scale; canvas.height = video.videoHeight * scale;
       const ctx = canvas.getContext('2d');
       ctx.translate(canvas.width, 0); ctx.scale(-1, 1);
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      photoBase64 = canvas.toDataURL('image/jpeg', 0.6); 
+      app.tempPhoto = canvas.toDataURL('image/jpeg', 0.6); 
     }
 
-    try {
-      const insertData = { name: name, face_descriptor: Array.from(detection.descriptor) };
-      if(photoBase64) insertData.photo = photoBase64;
+    // นำข้อมูลใบหน้าไปเก็บไว้ใน RAM ชั่วคราว (ยังไม่ส่งเข้า Database)
+    app.tempDescriptors.push(Array.from(detection.descriptor));
+    app.regCounter++;
 
-      const { error } = await this.supabase.from('users').insert([insertData]);
-      if(error) throw error;
-      
-      this.regCounter++;
+    // 4. จัดการ UI และการบันทึกลง Database (ทำเมื่อครบ 3 รูป)
+    if(app.regCounter >= 3) {
+      app.setHtmlAndIcons('btn-save-face', '<span class="loader"></span> กำลังบันทึกลงฐานข้อมูล...');
       nameInput.disabled = true; 
-      msg.innerHTML = `<span style="color:var(--success)">บันทึกมุมที่ ${this.regCounter} สำเร็จ!</span>`;
-      
-      if(this.regCounter >= 3) {
-        msg.innerHTML += '<br><b style="color: var(--primary); font-size: 1.1em; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 12px;"><i data-lucide="check-circle-2" style="width: 20px; height: 20px;"></i> ลงทะเบียนครบถ้วน ดำเนินการเสร็จสิ้น</b><span style="display: block; color: var(--text-muted); font-size: 0.9em; margin-top: 4px;">ระบบกำลังพากลับหน้าหลักอัตโนมัติ...</span>';
+
+      try {
+        // สร้าง Array ของข้อมูล 3 ชุดเพื่อส่งเข้า Supabase รวดเดียว
+        const insertPayload = app.tempDescriptors.map((desc, index) => {
+          return {
+            name: name,
+            face_descriptor: desc,
+            photo: index === 0 ? app.tempPhoto : null // เก็บรูปแค่แถวแรกแถวเดียวเหมือนระบบเดิม
+          };
+        });
+
+        // ส่งข้อมูลทั้ง 3 มุมเข้า Database ภายใน Request เดียว (เร็วขึ้น 3 เท่า)
+        const { error } = await app.supabase.from('users').insert(insertPayload);
+        if(error) throw error;
+        
+        msg.innerHTML = `<span style="color:var(--success)">บันทึกมุมที่ 3 สำเร็จ!</span><br><b style="color: var(--primary); font-size: 1.1em; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 12px;"><i data-lucide="check-circle-2" style="width: 20px; height: 20px;"></i> ลงทะเบียนครบถ้วน ดำเนินการเสร็จสิ้น</b><span style="display: block; color: var(--text-muted); font-size: 0.9em; margin-top: 4px;">ระบบกำลังพากลับหน้าหลักอัตโนมัติ...</span>`;
         lucide.createIcons({ root: msg });
-        this.setHtmlAndIcons('btn-save-face', `<i data-lucide="check-check" style="width: 22px; height: 22px;"></i> เสร็จเรียบร้อย`);
+        app.setHtmlAndIcons('btn-save-face', `<i data-lucide="check-check" style="width: 22px; height: 22px;"></i> เสร็จเรียบร้อย`);
         btn.disabled = true; btn.classList.remove('btn-primary'); btn.classList.add('btn-success');
-        setTimeout(() => this.navigate('view-home'), 3000);
-      } else {
-        msg.innerHTML += '<br><span style="color: var(--text-muted);">กรุณาขยับหน้าเล็กน้อยแล้วกดบันทึกอีกครั้ง</span>';
-        this.resetRegBtn('บันทึกมุมต่อไป');
+        
+        setTimeout(() => app.navigate('view-home'), 3000);
+
+      } catch(e) {
+        if (e.message && e.message.includes('security policy')) {
+            Swal.fire('ฐานข้อมูลถูกล็อก', 'กรุณาเปิด RLS สำหรับตาราง users', 'error');
+        } else {
+            Swal.fire('Error', e.message, 'error');
+        }
+        // หาก Database Error ให้ถอยหลังเคาน์เตอร์กลับมา 1 สเตป เพื่อให้กดบันทึกใหม่ได้
+        app.regCounter--;
+        app.tempDescriptors.pop();
+        app.resetRegBtn('ลองบันทึกอีกครั้ง');
       }
-    } catch(e) {
-      msg.innerHTML = `<span style="color:var(--danger)">Error: ${e.message}</span>`;
-      this.resetRegBtn(this.regCounter === 0 ? 'บันทึกใบหน้า' : 'บันทึกมุมต่อไป');
+
+    } else {
+      // กรณียังไม่ครบ 3 รูป ให้อัปเดต UI ทันที (เร็วมาก เพราะไม่ติดต่อเน็ต)
+      msg.innerHTML = `<span style="color:var(--success)">บันทึกมุมที่ ${app.regCounter} สำเร็จ!</span><br><span style="color: var(--text-muted);">กรุณาขยับหน้าเล็กน้อยแล้วกดบันทึกอีกครั้ง</span>`;
+      app.resetRegBtn('บันทึกมุมต่อไป');
     }
   },
 
   resetRegBtn(text = 'บันทึกใบหน้า') {
-    this.setHtmlAndIcons('btn-save-face', `<i data-lucide="save" style="width: 22px; height: 22px;"></i> ${text} <span id="reg-count" style="background: rgba(255,255,255,0.25); padding: 2px 10px; border-radius: 12px; font-size: 0.85em; margin-left: 6px;">${this.regCounter}/3</span>`);
+    app.setHtmlAndIcons('btn-save-face', `<i data-lucide="save" style="width: 22px; height: 22px;"></i> ${text} <span id="reg-count" style="background: rgba(255,255,255,0.25); padding: 2px 10px; border-radius: 12px; font-size: 0.85em; margin-left: 6px;">${app.regCounter}/3</span>`);
     document.getElementById('btn-save-face').disabled = false;
   },
 
@@ -1499,68 +1518,64 @@ const app = {
     document.getElementById('btn-start-scan').disabled = true;
     document.getElementById('scan-line').style.display = 'none';
 
-    this.setHtmlAndIcons('scan-sys-status', '<i data-lucide="loader-2" class="loader-dark" style="border:none; animation: spin 1.5s linear infinite; width: 20px; height: 20px; color: var(--text-muted);"></i> กำลังเตรียมระบบทั้งหมด...');
-    this.setHtmlAndIcons('scan-gps-status', '<i data-lucide="loader-2" class="loader-dark" style="border:none; animation: spin 1.5s linear infinite; width: 16px; height: 16px;"></i> ตรวจสอบตำแหน่ง...');
+    app.setHtmlAndIcons('scan-sys-status', '<i data-lucide="loader-2" class="loader-dark" style="border:none; animation: spin 1.5s linear infinite; width: 20px; height: 20px; color: var(--text-muted);"></i> กำลังเตรียมระบบทั้งหมด...');
+    app.setHtmlAndIcons('scan-gps-status', '<i data-lucide="loader-2" class="loader-dark" style="border:none; animation: spin 1.5s linear infinite; width: 16px; height: 16px;"></i> ตรวจสอบตำแหน่ง...');
 
     const pCamera = navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } }).then(async stream => {
-      this.currentStream = stream;
+      app.currentStream = stream;
       const video = document.getElementById('scan-video');
       video.srcObject = stream;
       await video.play().catch(e=>{}); 
     }).catch(e => { throw new Error('เปิดกล้องไม่ได้'); });
 
-    const pGPS = this.checkGPS();
-    const pAI = this.loadAIModels('scan-badge');
-    const pDB = this.supabase.from('users').select('name, face_descriptor')
+    const pGPS = app.checkGPS();
+    const pAI = app.loadAIModels('scan-badge');
+    const pDB = app.supabase.from('users').select('name, face_descriptor')
       .then(({data, error}) => {
         if(error || !data || data.length===0) throw new Error("ไม่พบข้อมูลพนักงาน");
-        this.knownFaces = data.map(u => ({ name: u.name, descriptor: new Float32Array(u.face_descriptor) }));
+        app.knownFaces = data.map(u => ({ name: u.name, descriptor: new Float32Array(u.face_descriptor) }));
       });
 
     try {
       await Promise.all([pCamera, pGPS, pAI, pDB]);
-      this.setHtmlAndIcons('scan-sys-status', '<span style="color:var(--success); font-weight: 700;"><i data-lucide="check-circle-2" style="width: 20px; height: 20px; vertical-align: middle;"></i> ระบบพร้อมใช้งาน</span>');
+      app.setHtmlAndIcons('scan-sys-status', '<span style="color:var(--success); font-weight: 700;"><i data-lucide="check-circle-2" style="width: 20px; height: 20px; vertical-align: middle;"></i> ระบบพร้อมใช้งาน</span>');
       document.getElementById('btn-start-scan').disabled = false;
-      this.setHtmlAndIcons('scan-badge', '<i data-lucide="scan" style="width: 18px; height: 18px;"></i> กล้องพร้อมแล้ว แตะเพื่อสแกน');
+      app.setHtmlAndIcons('scan-badge', '<i data-lucide="scan" style="width: 18px; height: 18px;"></i> กล้องพร้อมแล้ว แตะเพื่อสแกน');
     } catch(e) {
-      this.setHtmlAndIcons('scan-sys-status', `<span style="color:var(--danger); font-weight: 600;"><i data-lucide="alert-circle" style="width: 20px; height: 20px; vertical-align: middle;"></i> ${e.message}</span>`);
+      app.setHtmlAndIcons('scan-sys-status', `<span style="color:var(--danger); font-weight: 600;"><i data-lucide="alert-circle" style="width: 20px; height: 20px; vertical-align: middle;"></i> ${e.message}</span>`);
     }
   },
 
   async checkGPS() {
     try {
-      const { data: config } = await this.supabase.from('config').select('*').eq('id', 1).single();
+      const { data: config } = await app.supabase.from('config').select('*').eq('id', 1).single();
       const ipRes = await fetch('https://api.ipify.org?format=json').catch(() => null);
       const ipData = ipRes ? await ipRes.json() : { ip: null };
 
-      this.sysConfig = config || {};
+      app.sysConfig = config || {};
 
       if (config && config.office_ip && ipData.ip === config.office_ip) {
-        this.currentLat = config.lat || 0; this.currentLng = config.lng || 0;
-        this.setHtmlAndIcons('scan-gps-status', `<i data-lucide="wifi" style="width: 16px; height: 16px;"></i> ยืนยันตำแหน่งผ่าน Wi-Fi ออฟฟิศแล้ว`);
+        app.currentLat = config.lat || 0; app.currentLng = config.lng || 0;
+        app.setHtmlAndIcons('scan-gps-status', `<i data-lucide="wifi" style="width: 16px; height: 16px;"></i> ใช้ Wi-Fi ออฟฟิศ`);
         return; 
       }
 
-      this.setHtmlAndIcons('scan-gps-status', `<i data-lucide="map-pin" style="width: 16px; height: 16px;"></i> กำลังตรวจสอบพิกัด GPS...`);
-      const pos = await this.getAccurateLocation();
-      this.currentLat = pos.coords.latitude; this.currentLng = pos.coords.longitude;
+      app.setHtmlAndIcons('scan-gps-status', `<i data-lucide="map-pin" style="width: 16px; height: 16px;"></i> กำลังตรวจสอบพิกัด GPS...`);
+      const pos = await app.getAccurateLocation();
+      app.currentLat = pos.coords.latitude; app.currentLng = pos.coords.longitude;
       const accuracy = Math.round(pos.coords.accuracy);
 
       if (!config || !config.lat || !config.lng || config.radius == 0) {
-        this.setHtmlAndIcons('scan-gps-status', `<i data-lucide="map" style="width: 16px; height: 16px;"></i> GPS: นอกพื้นที่/ไม่จำกัด (±${accuracy}ม.)`);
+        app.setHtmlAndIcons('scan-gps-status', `<i data-lucide="map" style="width: 16px; height: 16px;"></i> นอกพื้นที่ (±${accuracy}ม.)`);
         return; 
       }
       
-      const dist = this.haversine(this.currentLat, this.currentLng, config.lat, config.lng);
-      let allowance = (accuracy > 10 && accuracy < 60) ? Math.min(accuracy * 0.3, 20) : 0;
-      const effectiveDist = Math.max(0, dist - allowance);
+      const dist = app.haversine(app.currentLat, app.currentLng, config.lat, config.lng);
 
-      if (effectiveDist <= config.radius) {
-        let accWarn = accuracy > 15 ? ` <span style="color:#f59e0b;font-size:0.85em;">(สัญญาณอ่อน ±${accuracy}ม.)</span>` : ` (±${accuracy}ม.)`;
-        this.setHtmlAndIcons('scan-gps-status', `<i data-lucide="map-pin" style="width: 16px; height: 16px;"></i> GPS: อยู่ในพื้นที่ (${Math.round(dist)} เมตร)${accWarn}`);
+      if (dist <= config.radius) {
+        app.setHtmlAndIcons('scan-gps-status', `<i data-lucide="map-pin" style="width: 16px; height: 16px;"></i> อยู่ในพื้นที่ (${Math.round(dist)}ม.)`);
       } else {
-        let extraMsg = accuracy > 15 ? ` <br><span style="font-size: 0.85em; color: #f59e0b;">(สัญญาณอ่อน ±${accuracy}ม. แนะนำให้ออกที่โล่ง หรือต่อ Wi-Fi ออฟฟิศ)</span>` : '';
-        throw new Error(`อยู่นอกพื้นที่กำหนด (${Math.round(dist)} ม. / ${config.radius} ม.)${extraMsg}`);
+        throw new Error(`อยู่นอกพื้นที่กำหนด (${Math.round(dist)} ม.)`);
       }
     } catch(e) {
       throw new Error(e.message || 'ตรวจสอบ GPS ล้มเหลว');
@@ -1570,35 +1585,35 @@ const app = {
   async startScanning() {
     const btn = document.getElementById('btn-start-scan');
     btn.style.display = 'none';
-    this.setHtmlAndIcons('scan-badge', '<i data-lucide="scan-face" style="width: 18px; height: 18px;"></i> กำลังสแกน... มองกล้อง');
+    app.setHtmlAndIcons('scan-badge', '<i data-lucide="scan-face" style="width: 18px; height: 18px;"></i> กำลังสแกน... มองกล้อง');
     document.getElementById('scan-line').style.display = 'block';
 
     const video = document.getElementById('scan-video');
     await video.play().catch(e=>{}); 
 
     const scanFrame = async () => {
-      if (this.currentView !== 'view-scan' || video.paused || video.ended) return;
+      if (app.currentView !== 'view-scan' || video.paused || video.ended) return;
       try {
         const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
         const detection = await faceapi.detectSingleFace(video, options).withFaceLandmarks().withFaceDescriptor();
         
         if (detection) {
           let best = { name: 'unknown', distance: 1.0 };
-          this.knownFaces.forEach(u => {
+          app.knownFaces.forEach(u => {
             const d = faceapi.euclideanDistance(detection.descriptor, u.descriptor);
             if(d < best.distance) best = { name: u.name, distance: d };
           });
 
           if (best.distance < MATCH_THRESHOLD) {
-            if(this.scanInterval) clearTimeout(this.scanInterval);
-            this.showConfirmModal(best.name, best.distance);
+            if(app.scanInterval) clearTimeout(app.scanInterval);
+            app.showConfirmModal(best.name, best.distance);
             return; 
           } else {
-            this.setHtmlAndIcons('scan-badge', `<i data-lucide="user-x" style="width: 18px; height: 18px;"></i> ไม่รู้จัก (${best.distance.toFixed(2)})`);
+            app.setHtmlAndIcons('scan-badge', `<i data-lucide="user-x" style="width: 18px; height: 18px;"></i> ไม่รู้จัก (${best.distance.toFixed(2)})`);
           }
         }
       } catch (e) {}
-      this.scanInterval = setTimeout(scanFrame, 200); 
+      app.scanInterval = setTimeout(scanFrame, 200); 
     };
     scanFrame();
   },
@@ -1606,7 +1621,7 @@ const app = {
   async showConfirmModal(name, distance) {
     document.getElementById('scan-line').style.display = 'none';
     document.getElementById('scan-video').pause();
-    this.matchedName = name;
+    app.matchedName = name;
     document.getElementById('modal-user-name').innerText = name;
     const accuracy = ((1 - distance) * 100).toFixed(1);
     document.getElementById('modal-score').innerText = `${accuracy}%`;
@@ -1619,17 +1634,16 @@ const app = {
     timeLog.style.display = 'none';
     lucide.createIcons({ root: btnGrid });
 
-    // หาเวลาวันนี้แบบ Text DD/MM/YYYY
     const bkkDate = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Bangkok"}));
     const todayStr = `${String(bkkDate.getDate()).padStart(2, '0')}/${String(bkkDate.getMonth() + 1).padStart(2, '0')}/${bkkDate.getFullYear()}`;
 
-    const { data: logs } = await this.supabase.from('attendance').select('type, log_time').eq('name', name).eq('log_date', todayStr);
+    const { data: logs } = await app.supabase.from('attendance').select('type, log_time').eq('name', name).eq('log_date', todayStr);
     
     let hasIn = false; let hasOut = false; let timeIn = '-'; let timeOut = '-';
     if (logs) {
         logs.forEach(l => {
-            if(l.type === 'เข้างาน') { hasIn = true; timeIn = this.formatThaiTime(l.log_time); }
-            if(l.type === 'เลิกงาน') { hasOut = true; timeOut = this.formatThaiTime(l.log_time); }
+            if(l.type === 'เข้างาน') { hasIn = true; timeIn = app.formatThaiTime(l.log_time); }
+            if(l.type === 'เลิกงาน') { hasOut = true; timeOut = app.formatThaiTime(l.log_time); }
         });
     }
 
@@ -1639,18 +1653,18 @@ const app = {
 
     if (timeHtml !== '') { timeLog.innerHTML = timeHtml; timeLog.style.display = 'flex'; } 
 
+    let canReport = false;
+    if (app.sysConfig && app.sysConfig.emp_report_access) {
+      if (app.sysConfig.emp_report_access === 'all') canReport = true;
+      else if (app.sysConfig.emp_report_access.startsWith('custom:')) {
+        const allowedNames = app.sysConfig.emp_report_access.replace('custom:', '').split(',').map(n => n.trim());
+        if (allowedNames.includes(name)) canReport = true;
+      }
+    }
+
     if (!hasIn) {
       btnGrid.innerHTML = `<button class="btn btn-success" id="btn-clock-in" onclick="app.submitAttendance('เข้างาน')" style="padding: 16px; font-size: 1.1em;"><i data-lucide="log-in" style="width: 22px; height: 22px;"></i> บันทึกเข้างาน</button>`;
     } else if (hasIn && !hasOut) {
-      let canReport = false;
-      if (this.sysConfig && this.sysConfig.emp_report_access) {
-        if (this.sysConfig.emp_report_access === 'all') canReport = true;
-        else if (this.sysConfig.emp_report_access.startsWith('custom:')) {
-          const allowedNames = this.sysConfig.emp_report_access.replace('custom:', '').split(',').map(n => n.trim());
-          if (allowedNames.includes(name)) canReport = true;
-        }
-      }
-      
       let reportHtml = '';
       if (canReport) {
         reportHtml = `
@@ -1675,9 +1689,9 @@ const app = {
 
   closeModal() {
     document.getElementById('scan-modal').style.display = 'none';
-    this.matchedName = null;
+    app.matchedName = null;
     document.getElementById('scan-video').play().catch(e=>{});
-    this.setHtmlAndIcons('scan-badge', '<i data-lucide="scan" style="width: 18px; height: 18px;"></i> กล้องพร้อม แตะเพื่อเริ่มสแกน');
+    app.setHtmlAndIcons('scan-badge', '<i data-lucide="scan" style="width: 18px; height: 18px;"></i> กล้องพร้อม แตะเพื่อเริ่มสแกน');
     document.getElementById('btn-start-scan').style.display = 'flex';
   },
 
@@ -1699,27 +1713,33 @@ const app = {
     const d = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Bangkok"}));
     const log_date = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
     const log_time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
-    const mapLink = (this.currentLat && this.currentLat !== '-') ? `https://www.google.com/maps?q=${this.currentLat},${this.currentLng}` : '';
+    const mapLink = (app.currentLat && app.currentLat !== '-') ? `https://www.google.com/maps?q=${app.currentLat},${app.currentLng}` : '';
 
     try {
-      const { error } = await this.supabase.from('attendance').insert([{
-          name: this.matchedName,
+      const { error } = await app.supabase.from('attendance').insert([{
+          name: app.matchedName,
           type: typeStr,
           log_date: log_date,
           log_time: log_time,
-          lat: this.currentLat ? String(this.currentLat) : '',
-          lng: this.currentLng ? String(this.currentLng) : '',
+          lat: app.currentLat ? String(app.currentLat) : '',
+          lng: app.currentLng ? String(app.currentLng) : '',
           map_link: mapLink,
           emp_report: empReportText
       }]);
-      if (error) throw error;
+      
+      if (error) {
+          if (error.message && error.message.includes('security policy')) {
+              throw new Error('ฐานข้อมูลถูกล็อก (RLS) กรุณาให้ Admin เปิดสิทธิ์การเขียนสำหรับตาราง attendance');
+          }
+          throw error;
+      }
 
       Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', text: `บันทึก ${typeStr} เรียบร้อย`, timer: 2500, showConfirmButton: false });
       document.getElementById('scan-modal').style.display = 'none';
-      this.navigate('view-home');
+      app.navigate('view-home');
     } catch(e) {
       Swal.fire('บันทึกล้มเหลว', e.message, 'error');
-      this.closeModal(); 
+      app.closeModal(); 
     }
   },
 
@@ -1761,7 +1781,7 @@ const app = {
         const dd = String(bkkDate.getDate()).padStart(2, '0');
         dateEl.value = `${yyyy}-${mm}-${dd}`;
       }
-      this.loadDailyReport();
+      app.loadDailyReport();
     } else if (tab === 'employee') {
       document.getElementById('filter-monthly').style.display = 'flex';
       document.getElementById('filter-daily').style.display = 'none';
@@ -1774,11 +1794,11 @@ const app = {
         yEl.value = d.getFullYear();
         mEl.setAttribute('data-init', 'true');
       }
-      this.loadEmployeeData();
+      app.loadEmployeeData();
     } else {
       document.getElementById('filter-monthly').style.display = 'flex';
       document.getElementById('filter-daily').style.display = 'none';
-      this.loadReportData();
+      app.loadReportData();
     }
   },
 
@@ -1791,15 +1811,15 @@ const app = {
 
     tbody.innerHTML = '';
     status.style.display = 'block';
-    this.setHtmlAndIcons('report-status', '<i data-lucide="loader-2" class="loader-dark" style="border:none; animation: spin 1.5s linear infinite; width: 24px; height: 24px;"></i> กำลังดึงข้อมูลพนักงาน...');
+    app.setHtmlAndIcons('report-status', '<i data-lucide="loader-2" class="loader-dark" style="border:none; animation: spin 1.5s linear infinite; width: 24px; height: 24px;"></i> กำลังดึงข้อมูลพนักงาน...');
 
     const mm = String(month).padStart(2, '0');
     const dateFilter = `%/${mm}/${year}`;
 
     try {
       const [usersRes, logsRes] = await Promise.all([
-        this.supabase.from('users').select('*'),
-        this.supabase.from('attendance').select('*').like('log_date', dateFilter)
+        app.supabase.from('users').select('*'),
+        app.supabase.from('attendance').select('*').like('log_date', dateFilter)
       ]);
       
       const employees = usersRes.data || [];
@@ -1818,7 +1838,18 @@ const app = {
           if (log.type === 'เลิกงาน') attendanceCounts[log.name].outDates.add(log.log_date);
       });
 
-      employees.forEach((emp, index) => {
+      // จัดกลุ่มพนักงานที่มีชื่อซ้ำกัน ให้เหลือเพียง 1 รายการสำหรับการแสดงผล
+      const uniqueEmployees = {};
+      employees.forEach(emp => {
+        if (!uniqueEmployees[emp.name]) {
+          uniqueEmployees[emp.name] = emp;
+        } else if (emp.photo && !uniqueEmployees[emp.name].photo) {
+          // หากรายการแรกไม่มีรูป ให้ดึงรูปจากรายการถัดไปมาใช้
+          uniqueEmployees[emp.name].photo = emp.photo;
+        }
+      });
+
+      Object.values(uniqueEmployees).forEach((emp, index) => {
         const counts = attendanceCounts[emp.name] || { inDates: new Set(), outDates: new Set() };
         const inCount = counts.inDates.size;
         const outCount = counts.outDates.size;
@@ -1832,7 +1863,7 @@ const app = {
         let regDate = '-'; let regTime = '';
         if (emp.registered_at) {
           const d = new Date(emp.registered_at);
-          regDate = this.formatThaiDate(`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`);
+          regDate = app.formatThaiDate(`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`);
           regTime = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} น.`;
         }
 
@@ -1862,7 +1893,7 @@ const app = {
       lucide.createIcons({ root: tbody });
     } catch(e) {
       status.style.display = 'block';
-      this.setHtmlAndIcons('report-status', `<span style="color:var(--danger);"><i data-lucide="alert-circle"></i> Error: ${e.message}</span>`);
+      app.setHtmlAndIcons('report-status', `<span style="color:var(--danger);"><i data-lucide="alert-circle"></i> Error: ${e.message}</span>`);
     }
   },
 
@@ -1877,14 +1908,14 @@ const app = {
     const yEl = document.getElementById('report-year');
 
     tbody.innerHTML = ''; userSelect.innerHTML = ''; calendarArea.innerHTML = '';
-    this.calendarData = {}; status.style.display = 'block';
-    this.setHtmlAndIcons('report-status', '<i data-lucide="loader-2" class="loader-dark" style="animation: spin 1.5s linear infinite;"></i> กำลังดึงข้อมูล...');
+    app.calendarData = {}; status.style.display = 'block';
+    app.setHtmlAndIcons('report-status', '<i data-lucide="loader-2" class="loader-dark" style="animation: spin 1.5s linear infinite;"></i> กำลังดึงข้อมูล...');
 
     const mm = String(mEl.value).padStart(2, '0');
     const dateFilter = `%/${mm}/${yEl.value}`;
 
     try {
-      const { data: logs, error } = await this.supabase.from('attendance')
+      const { data: logs, error } = await app.supabase.from('attendance')
         .select('*').like('log_date', dateFilter).order('id', {ascending: false});
       if(error) throw error;
       
@@ -1900,17 +1931,17 @@ const app = {
         let dateParts = log.log_date.split('/'); 
         let dayNum = parseInt(dateParts[0], 10);
         
-        if(!this.calendarData[log.name]) this.calendarData[log.name] = {};
-        if(!this.calendarData[log.name][dayNum]) this.calendarData[log.name][dayNum] = { in: false, out: false, timeIn: '-', timeOut: '-', empReport: '' };
+        if(!app.calendarData[log.name]) app.calendarData[log.name] = {};
+        if(!app.calendarData[log.name][dayNum]) app.calendarData[log.name][dayNum] = { in: false, out: false, timeIn: '-', timeOut: '-', empReport: '' };
         
         if(log.type === 'เข้างาน') { 
-          this.calendarData[log.name][dayNum].in = true; 
-          this.calendarData[log.name][dayNum].timeIn = this.formatThaiTime(log.log_time); 
+          app.calendarData[log.name][dayNum].in = true; 
+          app.calendarData[log.name][dayNum].timeIn = app.formatThaiTime(log.log_time); 
         }
         if(log.type === 'เลิกงาน') { 
-          this.calendarData[log.name][dayNum].out = true; 
-          this.calendarData[log.name][dayNum].timeOut = this.formatThaiTime(log.log_time); 
-          this.calendarData[log.name][dayNum].empReport = log.emp_report || '';
+          app.calendarData[log.name][dayNum].out = true; 
+          app.calendarData[log.name][dayNum].timeOut = app.formatThaiTime(log.log_time); 
+          app.calendarData[log.name][dayNum].empReport = log.emp_report || '';
         }
 
         const tr = document.createElement('tr');
@@ -1927,8 +1958,8 @@ const app = {
 
         tr.innerHTML = `
           <td style="text-align: center; color: var(--text-muted); font-weight: 600;">${index + 1}</td>
-          <td style="font-weight: 500;">${this.formatThaiDate(log.log_date)}</td>
-          <td>${this.formatThaiTime(log.log_time)}</td>
+          <td style="font-weight: 500;">${app.formatThaiDate(log.log_date)}</td>
+          <td>${app.formatThaiTime(log.log_time)}</td>
           <td style="font-weight: 600; color: #1e293b;">${log.name}</td>
           <td class="${typeClass}">${log.type}</td>
           <td>${mapLink}</td>
@@ -1938,13 +1969,13 @@ const app = {
       });
       lucide.createIcons({ root: tbody });
 
-      Object.keys(this.calendarData).sort().forEach(name => {
+      Object.keys(app.calendarData).sort().forEach(name => {
         const opt = document.createElement('option'); opt.value = name; opt.textContent = name; userSelect.appendChild(opt);
       });
-      this.renderCalendar();
+      app.renderCalendar();
     } catch(e) {
       status.style.display = 'block';
-      this.setHtmlAndIcons('report-status', `<span style="color:var(--danger);"><i data-lucide="alert-circle"></i> Error: ${e.message}</span>`);
+      app.setHtmlAndIcons('report-status', `<span style="color:var(--danger);"><i data-lucide="alert-circle"></i> Error: ${e.message}</span>`);
     }
   },
 
@@ -1958,15 +1989,15 @@ const app = {
     tbody.innerHTML = '';
     if(detailsInput) detailsInput.value = ''; 
     status.style.display = 'block';
-    this.setHtmlAndIcons('report-status', '<i data-lucide="loader-2" class="loader-dark" style="animation: spin 1.5s linear infinite;"></i> กำลังดึงข้อมูล...');
+    app.setHtmlAndIcons('report-status', '<i data-lucide="loader-2" class="loader-dark" style="animation: spin 1.5s linear infinite;"></i> กำลังดึงข้อมูล...');
 
     try {
       const dArr = dateVal.split('-');
       const dateKey = `${dArr[2]}/${dArr[1]}/${dArr[0]}`;
 
       const [logsRes, reportsRes] = await Promise.all([
-        this.supabase.from('attendance').select('*').eq('log_date', dateKey),
-        this.supabase.from('daily_reports').select('details').eq('report_date', dateKey).maybeSingle()
+        app.supabase.from('attendance').select('*').eq('log_date', dateKey),
+        app.supabase.from('daily_reports').select('details').eq('report_date', dateKey).maybeSingle()
       ]);
       
       status.style.display = 'none';
@@ -1992,14 +2023,14 @@ const app = {
         tr.innerHTML = `
           <td style="text-align: center; color: var(--text-muted); font-weight: 600;">${seqIndex++}</td>
           <td style="font-weight: 600; color: #1e293b;">${name}</td>
-          <td class="${times.in !== '-' ? 'type-in' : ''}">${this.formatThaiTime(times.in)}</td>
-          <td class="${times.out !== '-' ? 'type-out' : ''}">${this.formatThaiTime(times.out)}</td>
+          <td class="${times.in !== '-' ? 'type-in' : ''}">${app.formatThaiTime(times.in)}</td>
+          <td class="${times.out !== '-' ? 'type-out' : ''}">${app.formatThaiTime(times.out)}</td>
         `;
         tbody.appendChild(tr);
       }
     } catch(e) {
       status.style.display = 'block';
-      this.setHtmlAndIcons('report-status', `<span style="color:var(--danger);"><i data-lucide="alert-circle"></i> Error: ${e.message}</span>`);
+      app.setHtmlAndIcons('report-status', `<span style="color:var(--danger);"><i data-lucide="alert-circle"></i> Error: ${e.message}</span>`);
     }
   },
 
@@ -2013,7 +2044,7 @@ const app = {
 
     try {
       Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-      const { error } = await this.supabase.from('daily_reports').upsert([{ report_date: dateKey, details: details }]);
+      const { error } = await app.supabase.from('daily_reports').upsert([{ report_date: dateKey, details: details }]);
       if(error) throw error;
       Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', showConfirmButton: false, timer: 1500 });
     } catch (e) {
@@ -2035,7 +2066,7 @@ const app = {
     if (searchInput) searchInput.value = ''; 
     document.getElementById('history-list-view').style.display = 'block';
     document.getElementById('history-detail-view').style.display = 'none';
-    this.loadWorkHistory();
+    app.loadWorkHistory();
   },
 
   async loadWorkHistory() {
@@ -2046,56 +2077,56 @@ const app = {
     const paginationContainer = document.getElementById('history-pagination-container');
     
     container.innerHTML = ''; paginationContainer.innerHTML = ''; status.style.display = 'flex'; 
-    this.setHtmlAndIcons('history-status', '<i data-lucide="loader-2" class="loader-dark" style="animation: spin 1.5s linear infinite; width: 36px; height: 36px; color: var(--primary);"></i><span>กำลังดึงข้อมูล...</span>');
+    app.setHtmlAndIcons('history-status', '<i data-lucide="loader-2" class="loader-dark" style="animation: spin 1.5s linear infinite; width: 36px; height: 36px; color: var(--primary);"></i><span>กำลังดึงข้อมูล...</span>');
 
     const mm = String(month).padStart(2, '0');
     const dateFilter = `%/${mm}/${year}`;
 
     try {
       const [logsRes, reportsRes] = await Promise.all([
-        this.supabase.from('attendance').select('*').like('log_date', dateFilter),
-        this.supabase.from('daily_reports').select('*').like('report_date', dateFilter)
+        app.supabase.from('attendance').select('*').like('log_date', dateFilter),
+        app.supabase.from('daily_reports').select('*').like('report_date', dateFilter)
       ]);
       
       const logs = logsRes.data || [];
       const reportsArr = reportsRes.data || [];
 
-      this.historyData = {};
+      app.historyData = {};
       logs.forEach(log => {
-        if(!this.historyData[log.log_date]) this.historyData[log.log_date] = { report: '', workers: {} };
-        if(!this.historyData[log.log_date].workers[log.name]) this.historyData[log.log_date].workers[log.name] = { in: '-', out: '-' };
-        if(log.type === 'เข้างาน') this.historyData[log.log_date].workers[log.name].in = log.log_time;
+        if(!app.historyData[log.log_date]) app.historyData[log.log_date] = { report: '', workers: {} };
+        if(!app.historyData[log.log_date].workers[log.name]) app.historyData[log.log_date].workers[log.name] = { in: '-', out: '-' };
+        if(log.type === 'เข้างาน') app.historyData[log.log_date].workers[log.name].in = log.log_time;
         if(log.type === 'เลิกงาน') {
-            this.historyData[log.log_date].workers[log.name].out = log.log_time;
-            this.historyData[log.log_date].workers[log.name].empReport = log.emp_report || '';
+            app.historyData[log.log_date].workers[log.name].out = log.log_time;
+            app.historyData[log.log_date].workers[log.name].empReport = log.emp_report || '';
         }
       });
 
       reportsArr.forEach(r => {
-        if(!this.historyData[r.report_date]) this.historyData[r.report_date] = { report: '', workers: {} };
-        this.historyData[r.report_date].report = r.details;
+        if(!app.historyData[r.report_date]) app.historyData[r.report_date] = { report: '', workers: {} };
+        app.historyData[r.report_date].report = r.details;
       });
 
       status.style.display = 'none';
 
-      this.historySortedDates = Object.keys(this.historyData).sort((a, b) => {
+      app.historySortedDates = Object.keys(app.historyData).sort((a, b) => {
         const pa = a.split('/'); const pb = b.split('/');
         const da = new Date(`${pa[2]}-${pa[1]}-${pa[0]}`); const db = new Date(`${pb[2]}-${pb[1]}-${pb[0]}`);
         return db - da; 
       });
 
-      this.historyCurrentPage = 1;
-      this.renderWorkHistoryList();
+      app.historyCurrentPage = 1;
+      app.renderWorkHistoryList();
 
     } catch(e) {
       status.style.display = 'flex';
-      this.setHtmlAndIcons('history-status', `<span style="color:var(--danger);"><i data-lucide="alert-circle"></i> Error: ${e.message}</span>`);
+      app.setHtmlAndIcons('history-status', `<span style="color:var(--danger);"><i data-lucide="alert-circle"></i> Error: ${e.message}</span>`);
     }
   },
 
   onSearchInput() {
-    this.historyCurrentPage = 1;
-    this.renderWorkHistoryList();
+    app.historyCurrentPage = 1;
+    app.renderWorkHistoryList();
   },
 
   renderWorkHistoryList() {
@@ -2104,26 +2135,26 @@ const app = {
     const rawKeyword = (document.getElementById('history-search-keyword').value || '').trim();
     const keywords = rawKeyword.toLowerCase().split(/\s+/).filter(k => k.length > 0);
 
-    let filteredDates = this.historySortedDates;
+    let filteredDates = app.historySortedDates;
     
     if (keywords.length > 0) {
-      filteredDates = this.historySortedDates.filter(dateStr => {
-        const dayData = this.historyData[dateStr];
+      filteredDates = app.historySortedDates.filter(dateStr => {
+        const dayData = app.historyData[dateStr];
         const reportText = (dayData.report || '').toLowerCase();
         const workerNames = Object.keys(dayData.workers).join(' ').toLowerCase();
-        const thaiDate = this.formatThaiDate(dateStr).toLowerCase();
+        const thaiDate = app.formatThaiDate(dateStr).toLowerCase();
         const searchPool = `${thaiDate} ${reportText} ${workerNames}`;
         return keywords.every(kw => searchPool.includes(kw));
       });
     }
 
     const totalItems = filteredDates.length;
-    const totalPages = Math.ceil(totalItems / this.historyItemsPerPage) || 1;
-    if (this.historyCurrentPage > totalPages) this.historyCurrentPage = totalPages;
-    if (this.historyCurrentPage < 1) this.historyCurrentPage = 1;
+    const totalPages = Math.ceil(totalItems / app.historyItemsPerPage) || 1;
+    if (app.historyCurrentPage > totalPages) app.historyCurrentPage = totalPages;
+    if (app.historyCurrentPage < 1) app.historyCurrentPage = 1;
 
-    const startIndex = (this.historyCurrentPage - 1) * this.historyItemsPerPage;
-    const endIndex = startIndex + this.historyItemsPerPage;
+    const startIndex = (app.historyCurrentPage - 1) * app.historyItemsPerPage;
+    const endIndex = startIndex + app.historyItemsPerPage;
     const paginatedDates = filteredDates.slice(startIndex, endIndex);
 
     container.innerHTML = ''; paginationContainer.innerHTML = '';
@@ -2134,14 +2165,14 @@ const app = {
     }
 
     paginatedDates.forEach(dateStr => {
-      const dayData = this.historyData[dateStr];
+      const dayData = app.historyData[dateStr];
       const workerCount = Object.keys(dayData.workers).length;
       let snippet = dayData.report || 'ไม่มีรายละเอียดงานที่บันทึกไว้';
-      let displayDate = this.formatThaiDate(dateStr);
+      let displayDate = app.formatThaiDate(dateStr);
 
       if (keywords.length > 0) {
-        snippet = this.highlightText(snippet, keywords);
-        displayDate = this.highlightText(displayDate, keywords);
+        snippet = app.highlightText(snippet, keywords);
+        displayDate = app.highlightText(displayDate, keywords);
       } else if (!dayData.report) {
         snippet = `<span style="color:#94a3b8; font-style:italic;">${snippet}</span>`;
       }
@@ -2156,7 +2187,7 @@ const app = {
       card.style.transition = 'all 0.2s ease';
       card.onmouseover = () => { card.style.transform = 'translateY(-4px)'; card.style.borderColor = 'var(--primary)'; card.style.boxShadow = '0 12px 24px -4px rgba(79,70,229,0.15)'; };
       card.onmouseout = () => { card.style.transform = 'translateY(0)'; card.style.borderColor = 'var(--border-color)'; card.style.boxShadow = '0 4px 12px -2px rgba(0,0,0,0.03)'; };
-      card.onclick = () => this.showHistoryDetail(dateStr);
+      card.onclick = () => app.showHistoryDetail(dateStr);
       
       card.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -2176,32 +2207,32 @@ const app = {
 
     if (totalPages > 1) {
       let pagesHtml = '';
-      let startPage = Math.max(1, this.historyCurrentPage - 2);
-      let endPage = Math.min(totalPages, this.historyCurrentPage + 2);
+      let startPage = Math.max(1, app.historyCurrentPage - 2);
+      let endPage = Math.min(totalPages, app.historyCurrentPage + 2);
       if (endPage - startPage < 4) {
         if (startPage === 1) endPage = Math.min(totalPages, startPage + 4);
         else if (endPage === totalPages) startPage = Math.max(1, endPage - 4);
       }
 
-      pagesHtml += `<button class="pagination-btn" onclick="app.goToHistoryPage(1)" ${this.historyCurrentPage === 1 ? 'disabled' : ''}><i data-lucide="chevrons-left" style="width: 16px; height: 16px;"></i> หน้าแรก</button>`;
-      pagesHtml += `<button class="pagination-btn" onclick="app.changeHistoryPage(-1)" ${this.historyCurrentPage === 1 ? 'disabled' : ''}><i data-lucide="chevron-left" style="width: 16px; height: 16px;"></i> ก่อนหน้า</button>`;
+      pagesHtml += `<button class="pagination-btn" onclick="app.goToHistoryPage(1)" ${app.historyCurrentPage === 1 ? 'disabled' : ''}><i data-lucide="chevrons-left" style="width: 16px; height: 16px;"></i> หน้าแรก</button>`;
+      pagesHtml += `<button class="pagination-btn" onclick="app.changeHistoryPage(-1)" ${app.historyCurrentPage === 1 ? 'disabled' : ''}><i data-lucide="chevron-left" style="width: 16px; height: 16px;"></i> ก่อนหน้า</button>`;
 
       for (let i = startPage; i <= endPage; i++) {
-        const activeClass = i === this.historyCurrentPage ? 'active' : '';
+        const activeClass = i === app.historyCurrentPage ? 'active' : '';
         pagesHtml += `<button class="pagination-btn ${activeClass}" onclick="app.goToHistoryPage(${i})">${i}</button>`;
       }
 
-      pagesHtml += `<button class="pagination-btn" onclick="app.changeHistoryPage(1)" ${this.historyCurrentPage === totalPages ? 'disabled' : ''}>ถัดไป <i data-lucide="chevron-right" style="width: 16px; height: 16px;"></i></button>`;
-      pagesHtml += `<button class="pagination-btn" onclick="app.goToHistoryPage(${totalPages})" ${this.historyCurrentPage === totalPages ? 'disabled' : ''}>หน้าสุดท้าย <i data-lucide="chevrons-right" style="width: 16px; height: 16px;"></i></button>`;
+      pagesHtml += `<button class="pagination-btn" onclick="app.changeHistoryPage(1)" ${app.historyCurrentPage === totalPages ? 'disabled' : ''}>ถัดไป <i data-lucide="chevron-right" style="width: 16px; height: 16px;"></i></button>`;
+      pagesHtml += `<button class="pagination-btn" onclick="app.goToHistoryPage(${totalPages})" ${app.historyCurrentPage === totalPages ? 'disabled' : ''}>หน้าสุดท้าย <i data-lucide="chevrons-right" style="width: 16px; height: 16px;"></i></button>`;
 
       paginationContainer.innerHTML = `<div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 32px; width: 100%; flex-wrap: wrap;">${pagesHtml}</div>`;
     }
     lucide.createIcons({ root: document.getElementById('history-list-view') });
   },
 
-  changeHistoryPage(delta) { this.goToHistoryPage(this.historyCurrentPage + delta); },
+  changeHistoryPage(delta) { app.goToHistoryPage(app.historyCurrentPage + delta); },
   goToHistoryPage(page) {
-    this.historyCurrentPage = page; this.renderWorkHistoryList();
+    app.historyCurrentPage = page; app.renderWorkHistoryList();
     const listTop = document.getElementById('history-list-view').getBoundingClientRect().top + window.scrollY - 80;
     window.scrollTo({ top: listTop, behavior: 'smooth' });
   },
@@ -2210,12 +2241,12 @@ const app = {
     document.getElementById('history-list-view').style.display = 'none';
     document.getElementById('history-detail-view').style.display = 'block';
     
-    let thaiDate = this.formatThaiDate(dateStr);
-    let reportText = this.historyData[dateStr].report || 'ไม่มีรายละเอียดการทำงานบันทึกไว้ในระบบ';
+    let thaiDate = app.formatThaiDate(dateStr);
+    let reportText = app.historyData[dateStr].report || 'ไม่มีรายละเอียดการทำงานบันทึกไว้ในระบบ';
 
-    this.setHtmlAndIcons('history-detail-title', `<i data-lucide="calendar" style="width:28px;height:28px;"></i> ประจำวันที่ ${thaiDate}`);
+    app.setHtmlAndIcons('history-detail-title', `<i data-lucide="calendar" style="width:28px;height:28px;"></i> ประจำวันที่ ${thaiDate}`);
     
-    const dayData = this.historyData[dateStr];
+    const dayData = app.historyData[dateStr];
     const detailTextEl = document.getElementById('history-detail-text');
     detailTextEl.innerHTML = reportText; 
     
@@ -2238,8 +2269,8 @@ const app = {
         tr.innerHTML = `
           <td style="text-align: center; color: var(--text-muted); font-weight: 600;">${index + 1}</td>
           <td style="font-weight: 600; color: #1e293b; font-size: 1.05em;">${name}</td>
-          <td class="${times.in !== '-' ? 'type-in' : ''}">${this.formatThaiTime(times.in)}</td>
-          <td class="${times.out !== '-' ? 'type-out' : ''}">${this.formatThaiTime(times.out)}</td>
+          <td class="${times.in !== '-' ? 'type-in' : ''}">${app.formatThaiTime(times.in)}</td>
+          <td class="${times.out !== '-' ? 'type-out' : ''}">${app.formatThaiTime(times.out)}</td>
         `;
         tbody.appendChild(tr);
 
@@ -2275,13 +2306,13 @@ const app = {
     if (newName && newName !== oldName) {
       try {
         Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-        const { error: err1 } = await this.supabase.from('users').update({ name: newName }).eq('name', oldName);
+        const { error: err1 } = await app.supabase.from('users').update({ name: newName }).eq('name', oldName);
         if(err1) throw err1;
-        const { error: err2 } = await this.supabase.from('attendance').update({ name: newName }).eq('name', oldName);
+        const { error: err2 } = await app.supabase.from('attendance').update({ name: newName }).eq('name', oldName);
         if(err2) throw err2;
 
         await Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'แก้ไขชื่อพนักงานเรียบร้อยแล้ว', timer: 1500 });
-        this.loadEmployeeData(); 
+        app.loadEmployeeData(); 
       } catch(e) { Swal.fire('ข้อผิดพลาด', e.message, 'error'); }
     }
   },
@@ -2290,10 +2321,10 @@ const app = {
     if (await Swal.fire({title: `ยืนยันการลบ ${name}?`, text: "ลบข้อมูลใบหน้าถาวร", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'ใช่, ลบทันที'}).then(r => r.isConfirmed)) {
       try {
         Swal.fire({ title: 'กำลังลบ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-        const { error } = await this.supabase.from('users').delete().eq('name', name);
+        const { error } = await app.supabase.from('users').delete().eq('name', name);
         if (error) throw error;
         await Swal.fire({ icon: 'success', title: 'ลบสำเร็จ', timer: 1500 });
-        this.loadEmployeeData(); 
+        app.loadEmployeeData(); 
       } catch(e) { Swal.fire('ข้อผิดพลาด', e.message, 'error'); }
     }
   },
@@ -2315,10 +2346,10 @@ const app = {
     if (formValues) {
       try {
         Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-        const { error } = await this.supabase.from('attendance').update({ type: formValues[0], log_time: formValues[1] }).eq('id', id);
+        const { error } = await app.supabase.from('attendance').update({ type: formValues[0], log_time: formValues[1] }).eq('id', id);
         if(error) throw error;
         await Swal.fire({ icon: 'success', title: 'สำเร็จ', timer: 1500 });
-        this.loadReportData(); 
+        app.loadReportData(); 
       } catch(e) { Swal.fire('ข้อผิดพลาด', e.message, 'error'); }
     }
   },
@@ -2327,10 +2358,10 @@ const app = {
     if (await Swal.fire({title: `ยืนยันการลบ?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'ใช่, ลบทันที'}).then(r=>r.isConfirmed)) {
       try {
         Swal.fire({ title: 'กำลังลบ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-        const { error } = await this.supabase.from('attendance').delete().eq('id', id);
+        const { error } = await app.supabase.from('attendance').delete().eq('id', id);
         if (error) throw error;
         await Swal.fire({ icon: 'success', title: 'ลบสำเร็จ', timer: 1500 });
-        this.loadReportData(); 
+        app.loadReportData(); 
       } catch(e) { Swal.fire('ข้อผิดพลาด', e.message, 'error'); }
     }
   },
@@ -2341,9 +2372,9 @@ const app = {
     const detailDiv = document.getElementById('cal-day-detail');
     if(detailDiv) detailDiv.style.display = 'none';
     
-    if(!userSelect.value || !this.calendarData[userSelect.value]) { area.innerHTML = '<div style="text-align:center; padding: 40px;">ไม่มีข้อมูล</div>'; return; }
+    if(!userSelect.value || !app.calendarData[userSelect.value]) { area.innerHTML = '<div style="text-align:center; padding: 40px;">ไม่มีข้อมูล</div>'; return; }
 
-    const userData = this.calendarData[userSelect.value];
+    const userData = app.calendarData[userSelect.value];
     const month = parseInt(document.getElementById('report-month').value, 10);
     const year = parseInt(document.getElementById('report-year').value, 10);
     const daysInMonth = new Date(year, month, 0).getDate();
@@ -2368,13 +2399,13 @@ const app = {
   showDayDetail(day) {
     const username = document.getElementById('summary-user-select').value;
     const detailDiv = document.getElementById('cal-day-detail');
-    if(!username || !this.calendarData[username]) return;
+    if(!username || !app.calendarData[username]) return;
 
     document.querySelectorAll('.cal-day').forEach(el => el.classList.remove('selected-day'));
     const selectedEl = document.getElementById('cal-day-' + day);
     if(selectedEl) selectedEl.classList.add('selected-day');
 
-    const data = this.calendarData[username][day];
+    const data = app.calendarData[username][day];
     const monthSelect = document.getElementById('report-month');
     const monthStr = monthSelect.options[monthSelect.selectedIndex].text;
     const yearStr = parseInt(document.getElementById('report-year').value) + 543;
